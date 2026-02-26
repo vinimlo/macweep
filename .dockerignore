@@ -1,0 +1,9 @@
+node_modules
+src-tauri/target
+.svelte-kit
+build
+.git
+.atena
+.hefesto
+.cursor
+docs

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+.svelte-kit/
+src-tauri/target/
+
+# Tauri generated
+src-tauri/gen/
+
+# IDE
+.vscode/
+.cursor/
+
+# macOS
+.DS_Store
+
+# Internal tooling (local config may contain secrets)
+.atena/
+.hefesto/
+
+# Playwright MCP
+.playwright-mcp/
