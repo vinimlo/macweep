@@ -1,0 +1,31 @@
+# Hefesto Checklist - macweep
+# Este arquivo define comandos que o Hefesto executa automaticamente em cada fase
+
+version: 1
+name: "macweep"
+
+# Hooks disponíveis:
+# - before_commit: Executado antes de cada commit (formatação, linting)
+# - before_push: Executado antes de cada push (testes)
+# - after_agent: Executado após o agente AI terminar
+
+hooks:
+  # Comandos executados ANTES do commit
+  before_commit:
+  - name: "Format code"
+    command: "echo 'Add your format command here'"
+    description: "Comando de formatação personalizado"
+    required: true
+
+  # Comandos executados ANTES do push (opcional)
+  # before_push:
+  #   - name: "Run tests"
+  #     command: "make test-fast"
+  #     description: "Executa testes rápidos"
+  #     required: false
+
+  # Comandos executados APÓS o agente AI (opcional)
+  # after_agent:
+  #   - name: "Validate changes"
+  #     command: "make validate"
+  #     required: false

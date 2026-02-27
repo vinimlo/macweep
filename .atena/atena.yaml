@@ -1,0 +1,74 @@
+# Atena Configuration
+# Strategic development management for macweep
+# macOS storage cleanup tool (Tauri v2 + Rust + SvelteKit 2/Svelte 5)
+
+task_tracker:
+  provider: github_issues
+
+core:
+  project_root: "."
+  templates_dir: ".atena/templates"
+
+github:
+  owner: "vinimlo"
+  repo: "macweep"
+  token: "${GITHUB_TOKEN}"
+  status_labels:
+    backlog: "status/backlog"
+    to_refine: "status/to-refine"
+    refined: "status/refined"
+
+ai:
+  provider: "claude"
+  model: null  # Uses provider default
+
+  # Provider-specific configuration
+  providers:
+    claude:
+      model: "claude-sonnet-4-6"
+    openai:
+      model: "gpt-4o"
+  chunking:
+    enabled: true
+    max_tokens_per_request: 4000
+    min_items_for_chunking: 2
+    context_budget: 1500
+  retry:
+    max_attempts: 3
+    base_delay: 2.0
+    max_delay: 60.0
+
+analysis:
+  # Enable code analysis for context
+  code_analysis: true
+
+  # Files to consider for context
+  context_files:
+    - "ATENA.md"
+    - "README.md"
+    - "docs/**/*.md"
+    - "CLAUDE.md"
+
+  # Patterns to ignore
+  ignore_patterns:
+    - "node_modules/**"
+    - "target/**"
+    - "dist/**"
+    - ".svelte-kit/**"
+    - "build/**"
+
+scoring:
+  # Weights for priority scoring formula
+  weights:
+    business_value: 2.0
+    effort: 1.0
+    risk: 1.5
+
+output:
+  # Output format: rich, plain, json
+  format: "rich"
+
+display:
+  # Show ASCII banner on main commands (init, refine, status)
+  # Can be overridden with --no-banner flag or ATENA_SHOW_BANNER=false
+  show_banner: true

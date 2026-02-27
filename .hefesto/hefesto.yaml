@@ -1,0 +1,119 @@
+# Hefesto Configuration File
+# This file governs the behavior of the Hefesto automation tool for macweep.
+# macOS storage cleanup tool (Tauri v2 + Rust + SvelteKit 2/Svelte 5)
+# Secrets (API keys, tokens) should be in .hefesto/config.env (not versioned).
+
+core:
+  project_root: .
+
+task_tracker:
+  # Task tracker provider: 'jira' or 'github_issues'
+  provider: github_issues
+  owner: "vinimlo"
+  repo: "macweep"
+  token: "${GITHUB_TOKEN}"
+  # Custom status labels for GitHub Issues
+  status_labels:
+    "To Do": "status/refined"
+    "In Progress": "status/in-progress"
+    "Done": "status/done"
+    "In Review": "status/in-review"
+
+github:
+  # The owner (user or organization) of the repository
+  owner: "vinimlo"
+  # The repository name
+  repo: "macweep"
+  # The base branch for Pull Requests
+  base_branch: "main"
+
+ai:
+  # Default AI provider: 'claude', 'gemini', or 'cursor'
+  agent: "claude"
+  # Specific model to use (e.g., claude-sonnet-4-6)
+  model: null
+  # Tools that the AI is allowed to use
+  allowed_tools: "read,write,edit,bash,mcp"
+  # Enable automatic rotation to other agents on rate limits
+  rotation_enabled: false
+  agent_priority: []
+
+auto_mode:
+  # Enable continuous automation loop
+  enabled: false
+  # Status label to look for tasks to do (GitHub Issues label)
+  status_todo: "To Do"
+  # Status label to set when working on a task
+  status_in_progress: "In Progress"
+  # Status label to set when task is done
+  status_done: "Ready for Review"
+  # Seconds to wait between polls when no tasks are found
+  idle_wait_seconds: 30
+
+limiter:
+  # Maximum cost in USD per execution
+  budget_usd: null
+  # Maximum daily budget in USD
+  daily_budget_usd: null
+  # Maximum execution duration in minutes
+  max_duration_minutes: null
+  # Maximum number of tasks to process in one run
+  max_tasks: null
+  # Max retries per task failure
+  max_retries_per_task: 3
+  # Max consecutive failures before stopping
+  max_consecutive_failures: 3
+  # Execution window start time (HH:MM)
+  schedule_start: null
+  # Execution window end time (HH:MM)
+  schedule_end: null
+  # Budget warning threshold percentage
+  warning_threshold_percent: 80
+
+cost:
+  # Currency for reporting costs (USD or BRL)
+  currency: "BRL"
+
+slack:
+  # Slack webhook URL for notifications (optional)
+  # Set in .hefesto/config.env as SLACK_WEBHOOK_URL
+  webhook_url: ""
+
+human_feedback:
+  # Enable interactive human-in-the-loop feedback
+  enabled: true
+  # How long to wait for user input before continuing automatically (in seconds)
+  timeout_seconds: 600
+
+stacked_branches:
+  # Habilita branches empilhadas baseadas em dependências (GitHub Issues)
+  enabled: true
+  # Falha quando detecta dependências circulares
+  fail_on_cycle: true
+  # Pula tasks quando uma dependência falhou
+  skip_on_dependency_fail: true
+  # Profundidade máxima de empilhamento
+  max_stack_depth: 10
+
+code_review:
+  # Code review provider: 'coderabbit', 'none'
+  provider: "coderabbit"
+  # CodeRabbit-specific configuration
+  coderabbit:
+    # Path to CodeRabbit CLI executable (default: "coderabbit")
+    cli_path: "coderabbit"
+    # Apply suggestions automatically (default: false)
+    auto_apply_suggestions: false
+    # Run review before commits (default: true)
+    review_on_commit: true
+    # Run review before creating PRs (default: true)
+    review_on_pr: true
+    # Path to custom .coderabbit.yaml config (optional)
+    config_file: null
+
+display:
+  # Show ASCII art banner on startup (forge-themed colors)
+  show_banner: true
+
+workflows:
+  use_new_architecture: true
