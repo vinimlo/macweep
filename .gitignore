@@ -1,0 +1,8 @@
+# Atena credentials
+.atena/config.env
+
+# Hefesto local state and credentials
+.hefesto/config.env
+.hefesto/auto_state.json
+.hefesto/auto_state.json.bak
+.hefesto/logs/
