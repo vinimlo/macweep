@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2-schema/main/tauri.schema.json",
+  "productName": "macweep",
+  "version": "0.1.1",
+  "identifier": "com.vinimlo.macweep",
+  "build": {
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "macweep",
+        "width": 900,
+        "height": 650,
+        "resizable": true,
+        "minWidth": 700,
+        "minHeight": 500
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/tray-icon.png",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "background": "dmg-background.png",
+        "windowPosition": { "x": 200, "y": 120 },
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 185, "y": 190 },
+        "applicationFolderPosition": { "x": 475, "y": 190 }
+      }
+    }
+  }
+}
