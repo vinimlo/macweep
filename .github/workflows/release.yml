@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  ci-gate:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Build DMG & GitHub Release
+    needs: ci-gate
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install dmgbuild
+        run: pip install dmgbuild
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app (no DMG)
+        run: npx tauri build --bundles app
+
+      - name: Build DMG
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          mkdir -p src-tauri/target/release/bundle/dmg
+          dmgbuild -s scripts/dmg-settings.py "macweep" \
+            "src-tauri/target/release/bundle/dmg/macweep_${TAG_NAME}_aarch64.dmg"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: src-tauri/target/release/bundle/dmg/*.dmg
