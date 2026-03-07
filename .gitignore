@@ -1,3 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+.svelte-kit/
+src-tauri/target/
+
+# Tauri generated
+src-tauri/gen/
+
+# IDE
+.vscode/
+.cursor/
+
+# macOS
+.DS_Store
+
 # Atena credentials
 .atena/config.env
 
