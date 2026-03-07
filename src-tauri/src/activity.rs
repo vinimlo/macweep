@@ -44,12 +44,11 @@ impl ActivityLogger {
     pub fn new(app_handle: AppHandle) -> anyhow::Result<Self> {
         // Rotate if file > 10 MB
         let path = activity_path();
-        if path.exists() {
-            if let Ok(meta) = fs::metadata(&path) {
-                if meta.len() > 10 * 1024 * 1024 {
-                    Self::rotate(&path);
-                }
-            }
+        if path.exists()
+            && let Ok(meta) = fs::metadata(&path)
+            && meta.len() > 10 * 1024 * 1024
+        {
+            Self::rotate(&path);
         }
 
         let mut opts = OpenOptions::new();

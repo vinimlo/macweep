@@ -83,12 +83,11 @@ pub fn is_symlink_or_escapes(path: &Path) -> bool {
     }
 
     // Check if canonical path escapes the expected parent
-    if let (Some(parent), Ok(canonical)) = (path.parent(), std::fs::canonicalize(path)) {
-        if let Ok(canonical_parent) = std::fs::canonicalize(parent) {
-            if !canonical.starts_with(&canonical_parent) {
-                return true;
-            }
-        }
+    if let (Some(parent), Ok(canonical)) = (path.parent(), std::fs::canonicalize(path))
+        && let Ok(canonical_parent) = std::fs::canonicalize(parent)
+        && !canonical.starts_with(&canonical_parent)
+    {
+        return true;
     }
 
     false
