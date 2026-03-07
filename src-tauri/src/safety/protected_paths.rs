@@ -38,8 +38,8 @@ fn is_protected_inner(path: &str) -> anyhow::Result<bool> {
 
     for protected in PROTECTED_PATHS {
         let protected_expanded = expand_tilde(protected);
-        let protected_canonical = std::fs::canonicalize(&protected_expanded)
-            .unwrap_or(protected_expanded);
+        let protected_canonical =
+            std::fs::canonicalize(&protected_expanded).unwrap_or(protected_expanded);
 
         // Component-level path matching (not string prefix)
         // Case-insensitive for macOS APFS
@@ -106,14 +106,10 @@ pub fn validate_before_delete(path: &Path) -> anyhow::Result<()> {
     }
 
     // Re-check protected status on the canonical path
-    let canonical = std::fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf());
+    let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
 
     if is_protected(&canonical.to_string_lossy()) {
-        anyhow::bail!(
-            "Refusing to delete protected path: {}",
-            path.display()
-        );
+        anyhow::bail!("Refusing to delete protected path: {}", path.display());
     }
 
     Ok(())

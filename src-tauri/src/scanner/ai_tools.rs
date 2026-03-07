@@ -27,7 +27,10 @@ impl Scanner for AiToolsScanner {
     }
 
     fn handles_category(&self, cat: &str) -> bool {
-        matches!(cat, "ai-tools" | "ollama-models" | "langflow" | "gemini-cache" | "coderabbit" | "opencode")
+        matches!(
+            cat,
+            "ai-tools" | "ollama-models" | "langflow" | "gemini-cache" | "coderabbit" | "opencode"
+        )
     }
 
     async fn is_available(&self) -> bool {
@@ -57,7 +60,10 @@ impl Scanner for AiToolsScanner {
                             risk_level: RiskLevel::Medium,
                             path: format!("ollama:{}", name),
                             size_bytes,
-                            detail: format!("AI model — can be re-downloaded with `ollama pull {}`", name),
+                            detail: format!(
+                                "AI model — can be re-downloaded with `ollama pull {}`",
+                                name
+                            ),
                             regeneration_hint: format!("ollama pull {}", name),
                         });
                     }
@@ -67,10 +73,25 @@ impl Scanner for AiToolsScanner {
 
         // Directory-based AI tools
         let dir_tools: &[(&[&str], &str, &str, Option<&str>)] = &[
-            (&[".langflow"], "langflow", "Langflow data", Some("langflow")),
-            (&[".gemini"], "gemini-cache", "Gemini CLI cache", Some("gemini")),
+            (
+                &[".langflow"],
+                "langflow",
+                "Langflow data",
+                Some("langflow"),
+            ),
+            (
+                &[".gemini"],
+                "gemini-cache",
+                "Gemini CLI cache",
+                Some("gemini"),
+            ),
             (&[".coderabbit"], "coderabbit", "CodeRabbit data", None),
-            (&[".opencode", ".config/opencode", ".cache/opencode"], "opencode", "OpenCode", None),
+            (
+                &[".opencode", ".config/opencode", ".cache/opencode"],
+                "opencode",
+                "OpenCode",
+                None,
+            ),
         ];
 
         for (dirs, category, base_label, check_cmd) in dir_tools {
@@ -81,10 +102,14 @@ impl Scanner for AiToolsScanner {
 
             for subpath in *dirs {
                 let dir = home.join(subpath);
-                if !dir.exists() { continue; }
+                if !dir.exists() {
+                    continue;
+                }
                 let path = dir.to_string_lossy().to_string();
                 let size = scanner::dir_size_bytes(&path).await;
-                if size == 0 { continue; }
+                if size == 0 {
+                    continue;
+                }
 
                 let label = if dirs.len() > 1 {
                     format!("{} ({})", base_label, subpath)
@@ -136,10 +161,7 @@ impl Scanner for AiToolsScanner {
                 });
                 continue;
             }
-            let output = Command::new("ollama")
-                .args(["rm", model])
-                .output()
-                .await?;
+            let output = Command::new("ollama").args(["rm", model]).output().await?;
             results.push(scanner::command_to_clean_result(item, &output));
         }
 

@@ -54,7 +54,10 @@ impl Scanner for IdeScanner {
                         } else {
                             format!("{} is NOT installed — config is likely stale", label)
                         },
-                        regeneration_hint: format!("{} will recreate config on first launch", label),
+                        regeneration_hint: format!(
+                            "{} will recreate config on first launch",
+                            label
+                        ),
                     });
                 }
             }

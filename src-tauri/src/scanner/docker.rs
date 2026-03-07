@@ -51,13 +51,21 @@ async fn clean_docker_volumes(items: &[ScanResult]) -> Result<Vec<CleanResult>> 
         let output = scanner::run_with_timeout(
             Command::new("docker").args(["volume", "rm", &item.path]),
             30,
-        ).await?;
+        )
+        .await?;
         results.push(CleanResult {
             id: item.id.clone(),
-            freed_bytes: if output.status.success() { item.size_bytes } else { 0 },
+            freed_bytes: if output.status.success() {
+                item.size_bytes
+            } else {
+                0
+            },
             success: output.status.success(),
-            error: if output.status.success() { None }
-                   else { Some(String::from_utf8_lossy(&output.stderr).to_string()) },
+            error: if output.status.success() {
+                None
+            } else {
+                Some(String::from_utf8_lossy(&output.stderr).to_string())
+            },
         });
     }
     Ok(results)
@@ -79,10 +87,15 @@ impl Scanner for DockerBuildCacheScanner {
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let output = scanner::run_with_timeout(
-            Command::new("docker")
-                .args(["system", "df", "--format", "{{.Type}}\t{{.Size}}\t{{.Reclaimable}}"]),
+            Command::new("docker").args([
+                "system",
+                "df",
+                "--format",
+                "{{.Type}}\t{{.Size}}\t{{.Reclaimable}}",
+            ]),
             30,
-        ).await?;
+        )
+        .await?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let mut items = Vec::new();
@@ -100,7 +113,8 @@ impl Scanner for DockerBuildCacheScanner {
                         path: "docker build cache".to_string(),
                         size_bytes,
                         detail: format!("Docker build cache — {}", parts[2].trim()),
-                        regeneration_hint: "docker build will recreate cache layers as needed".to_string(),
+                        regeneration_hint: "docker build will recreate cache layers as needed"
+                            .to_string(),
                     });
                 }
             }
@@ -115,7 +129,8 @@ impl Scanner for DockerBuildCacheScanner {
             let output = scanner::run_with_timeout(
                 Command::new("docker").args(["builder", "prune", "-a", "-f"]),
                 30,
-            ).await?;
+            )
+            .await?;
 
             results.push(scanner::command_to_clean_result(item, &output));
         }
@@ -127,16 +142,26 @@ impl Scanner for DockerBuildCacheScanner {
 
 #[async_trait]
 impl Scanner for DockerImagesScanner {
-    fn category(&self) -> &str { "docker-images" }
-    fn risk_level(&self) -> RiskLevel { RiskLevel::Low }
-    async fn is_available(&self) -> bool { docker_available().await }
+    fn category(&self) -> &str {
+        "docker-images"
+    }
+    fn risk_level(&self) -> RiskLevel {
+        RiskLevel::Low
+    }
+    async fn is_available(&self) -> bool {
+        docker_available().await
+    }
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let output = scanner::run_with_timeout(
-            Command::new("docker")
-                .args(["images", "--format", "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"]),
+            Command::new("docker").args([
+                "images",
+                "--format",
+                "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}",
+            ]),
             30,
-        ).await?;
+        )
+        .await?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let mut items = Vec::new();
@@ -179,7 +204,8 @@ impl Scanner for DockerImagesScanner {
             let output = scanner::run_with_timeout(
                 Command::new("docker").args(["rmi", "-f", &item.path]),
                 30,
-            ).await?;
+            )
+            .await?;
             results.push(scanner::command_to_clean_result(item, &output));
         }
         Ok(results)
@@ -190,23 +216,38 @@ impl Scanner for DockerImagesScanner {
 
 #[async_trait]
 impl Scanner for DockerOrphanVolumesScanner {
-    fn category(&self) -> &str { "docker-volumes-orphan" }
-    fn risk_level(&self) -> RiskLevel { RiskLevel::Low }
-    async fn is_available(&self) -> bool { docker_available().await }
+    fn category(&self) -> &str {
+        "docker-volumes-orphan"
+    }
+    fn risk_level(&self) -> RiskLevel {
+        RiskLevel::Low
+    }
+    async fn is_available(&self) -> bool {
+        docker_available().await
+    }
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let output = scanner::run_with_timeout(
-            Command::new("docker")
-                .args(["volume", "ls", "-f", "dangling=true", "--format", "{{.Name}}"]),
+            Command::new("docker").args([
+                "volume",
+                "ls",
+                "-f",
+                "dangling=true",
+                "--format",
+                "{{.Name}}",
+            ]),
             30,
-        ).await?;
+        )
+        .await?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let mut items = Vec::new();
 
         for name in stdout.lines() {
             let name = name.trim();
-            if name.is_empty() { continue; }
+            if name.is_empty() {
+                continue;
+            }
 
             items.push(ScanResult {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -231,21 +272,35 @@ impl Scanner for DockerOrphanVolumesScanner {
 
 #[async_trait]
 impl Scanner for DockerNamedVolumesScanner {
-    fn category(&self) -> &str { "docker-volumes-named" }
-    fn risk_level(&self) -> RiskLevel { RiskLevel::High }
-    async fn is_available(&self) -> bool { docker_available().await }
+    fn category(&self) -> &str {
+        "docker-volumes-named"
+    }
+    fn risk_level(&self) -> RiskLevel {
+        RiskLevel::High
+    }
+    async fn is_available(&self) -> bool {
+        docker_available().await
+    }
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let output = scanner::run_with_timeout(
             Command::new("docker").args(["volume", "ls", "--format", "{{.Name}}"]),
             30,
-        ).await?;
+        )
+        .await?;
 
         let dangling = scanner::run_with_timeout(
-            Command::new("docker")
-                .args(["volume", "ls", "-f", "dangling=true", "--format", "{{.Name}}"]),
+            Command::new("docker").args([
+                "volume",
+                "ls",
+                "-f",
+                "dangling=true",
+                "--format",
+                "{{.Name}}",
+            ]),
             30,
-        ).await?;
+        )
+        .await?;
         let dangling_names: HashSet<String> = String::from_utf8_lossy(&dangling.stdout)
             .lines()
             .map(|s| s.trim().to_string())
@@ -256,7 +311,9 @@ impl Scanner for DockerNamedVolumesScanner {
 
         for name in stdout.lines() {
             let name = name.trim();
-            if name.is_empty() || dangling_names.contains(name) { continue; }
+            if name.is_empty() || dangling_names.contains(name) {
+                continue;
+            }
 
             items.push(ScanResult {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -265,7 +322,8 @@ impl Scanner for DockerNamedVolumesScanner {
                 risk_level: self.risk_level(),
                 path: name.to_string(),
                 size_bytes: 1_048_576,
-                detail: "Named Docker volume — may contain database or application data".to_string(),
+                detail: "Named Docker volume — may contain database or application data"
+                    .to_string(),
                 regeneration_hint: "Data will be LOST. Only remove if you're sure.".to_string(),
             });
         }

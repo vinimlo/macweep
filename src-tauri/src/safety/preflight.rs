@@ -13,11 +13,8 @@ pub struct PreflightResult {
 
 pub async fn run_preflight() -> anyhow::Result<PreflightResult> {
     // Run all checks in parallel
-    let (docker_result, disk_free, available_tools) = tokio::join!(
-        check_docker(),
-        check_disk_free(),
-        detect_tools()
-    );
+    let (docker_result, disk_free, available_tools) =
+        tokio::join!(check_docker(), check_disk_free(), detect_tools());
 
     let (docker_running, docker_containers_active) = docker_result;
 
@@ -37,10 +34,7 @@ async fn check_docker() -> (bool, bool) {
         return (false, false);
     }
 
-    let ps = Command::new("docker")
-        .args(["ps", "-q"])
-        .output()
-        .await;
+    let ps = Command::new("docker").args(["ps", "-q"]).output().await;
     let containers_active = ps
         .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty())
         .unwrap_or(false);
@@ -51,14 +45,21 @@ async fn check_docker() -> (bool, bool) {
 async fn check_disk_free() -> anyhow::Result<f64> {
     let output = Command::new("df").args(["-k", "/"]).output().await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout.lines().nth(1).ok_or_else(|| anyhow::anyhow!("df parse error"))?;
+    let line = stdout
+        .lines()
+        .nth(1)
+        .ok_or_else(|| anyhow::anyhow!("df parse error"))?;
     let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.len() < 4 {
         anyhow::bail!("unexpected df format");
     }
     let total: f64 = parts[1].parse()?;
     let free: f64 = parts[3].parse()?;
-    Ok(if total > 0.0 { (free / total) * 100.0 } else { 0.0 })
+    Ok(if total > 0.0 {
+        (free / total) * 100.0
+    } else {
+        0.0
+    })
 }
 
 async fn detect_tools() -> Vec<String> {
@@ -72,10 +73,15 @@ async fn detect_tools() -> Vec<String> {
         ("ollama", "ollama"),
     ];
 
-    let checks: Vec<_> = tools.iter().map(|(_, cmd)| scanner::tool_installed(cmd)).collect();
+    let checks: Vec<_> = tools
+        .iter()
+        .map(|(_, cmd)| scanner::tool_installed(cmd))
+        .collect();
     let results = futures::future::join_all(checks).await;
 
-    tools.iter().zip(results)
+    tools
+        .iter()
+        .zip(results)
         .filter(|(_, available)| *available)
         .map(|((name, _), _)| name.to_string())
         .collect()

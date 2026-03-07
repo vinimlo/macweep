@@ -80,7 +80,11 @@ pub async fn dir_size_bytes(path: &str) -> u64 {
 pub fn command_to_clean_result(item: &ScanResult, output: &std::process::Output) -> CleanResult {
     CleanResult {
         id: item.id.clone(),
-        freed_bytes: if output.status.success() { item.size_bytes } else { 0 },
+        freed_bytes: if output.status.success() {
+            item.size_bytes
+        } else {
+            0
+        },
         success: output.status.success(),
         error: if output.status.success() {
             None
@@ -100,7 +104,11 @@ pub fn parse_size_with_units(num_str: &str, unit: &str) -> u64 {
         _ => 1.0,
     };
     let result = num * multiplier;
-    if result >= u64::MAX as f64 { u64::MAX } else { result as u64 }
+    if result >= u64::MAX as f64 {
+        u64::MAX
+    } else {
+        result as u64
+    }
 }
 
 /// Check if a command-line tool is available via `which`.
@@ -115,7 +123,9 @@ pub async fn tool_installed(cmd: &str) -> bool {
 
 /// Clean filesystem items with the standard validate-and-remove pattern.
 /// Checks existence, validates against protected paths, then removes.
-pub async fn clean_filesystem_items(items: &[crate::models::ScanResult]) -> Result<Vec<crate::models::CleanResult>> {
+pub async fn clean_filesystem_items(
+    items: &[crate::models::ScanResult],
+) -> Result<Vec<crate::models::CleanResult>> {
     use crate::safety::protected_paths;
     let mut results = Vec::new();
     for item in items {

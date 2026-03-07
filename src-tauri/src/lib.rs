@@ -1,8 +1,8 @@
 pub mod activity;
 mod commands;
 mod models;
-mod scanner;
 mod safety;
+mod scanner;
 mod tray;
 
 use std::sync::atomic::AtomicBool;

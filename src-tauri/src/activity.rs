@@ -71,7 +71,9 @@ impl ActivityLogger {
 
     fn rotate(path: &PathBuf) {
         // Keep last 5000 lines, using buffered line-by-line reading
-        let Ok(file) = fs::File::open(path) else { return };
+        let Ok(file) = fs::File::open(path) else {
+            return;
+        };
         let lines: Vec<String> = BufReader::new(file).lines().map_while(Result::ok).collect();
         if lines.len() > 5000 {
             let kept = &lines[lines.len() - 5000..];

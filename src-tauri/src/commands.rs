@@ -40,9 +40,15 @@ pub async fn scan_all(
         .collect();
 
     let total_scanners = available_scanners.len();
-    let available_tools: Vec<String> = available_scanners.iter().map(|s| s.category().to_string()).collect();
+    let available_tools: Vec<String> = available_scanners
+        .iter()
+        .map(|s| s.category().to_string())
+        .collect();
 
-    logger.info(None, &format!("Scan started ({} scanners available)", total_scanners));
+    logger.info(
+        None,
+        &format!("Scan started ({} scanners available)", total_scanners),
+    );
 
     channel
         .send(ScanProgress::Started { total_scanners })
@@ -168,7 +174,10 @@ pub async fn clean_items(
     }
     for item in &items {
         if item.path.len() > 4096 {
-            return Err(format!("Path too long: {}...", &item.path[..item.path.len().min(64)]));
+            return Err(format!(
+                "Path too long: {}...",
+                &item.path[..item.path.len().min(64)]
+            ));
         }
         if !scanner::KNOWN_CATEGORIES.contains(&item.category.as_str()) {
             return Err(format!("Unknown category: {}", item.category));
@@ -183,7 +192,9 @@ pub async fn clean_items(
     }
 
     // Enforce Docker preflight: refuse Docker cleanup if containers are running
-    let has_docker_items = items.iter().any(|i| DOCKER_CATEGORIES.contains(&i.category.as_str()));
+    let has_docker_items = items
+        .iter()
+        .any(|i| DOCKER_CATEGORIES.contains(&i.category.as_str()));
     if has_docker_items {
         logger.info(None, "Running Docker preflight check");
         let preflight_result = preflight::run_preflight()
@@ -326,13 +337,13 @@ async fn disk_info_or_default() -> DiskInfo {
 }
 
 async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
-    let output = Command::new("df")
-        .args(["-k", "/"])
-        .output()
-        .await?;
+    let output = Command::new("df").args(["-k", "/"]).output().await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout.lines().nth(1).ok_or_else(|| anyhow::anyhow!("df output parse error"))?;
+    let line = stdout
+        .lines()
+        .nth(1)
+        .ok_or_else(|| anyhow::anyhow!("df output parse error"))?;
     let parts: Vec<&str> = line.split_whitespace().collect();
 
     if parts.len() < 4 {
@@ -365,7 +376,9 @@ pub async fn get_audit_log(limit: Option<usize>) -> Result<Vec<audit::AuditEntry
 }
 
 #[tauri::command]
-pub async fn run_preflight(logger: State<'_, ActivityLogger>) -> Result<preflight::PreflightResult, String> {
+pub async fn run_preflight(
+    logger: State<'_, ActivityLogger>,
+) -> Result<preflight::PreflightResult, String> {
     logger.info(None, "Running preflight checks");
     let result = preflight::run_preflight().await.map_err(|e| e.to_string());
     if let Ok(ref pf) = result {

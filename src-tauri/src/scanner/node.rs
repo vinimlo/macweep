@@ -32,9 +32,27 @@ impl Scanner for NodeCacheScanner {
         let mut items = Vec::new();
 
         let caches = [
-            (".npm", "npm-cache", "npm cache", "npm download cache — safe to remove", "npm install will re-download as needed"),
-            ("Library/Caches/yarn", "yarn-cache", "Yarn cache", "Yarn download cache — safe to remove", "yarn install will re-download as needed"),
-            (".bun/install/cache", "bun-cache", "Bun cache", "Bun download cache — safe to remove", "bun install will re-download as needed"),
+            (
+                ".npm",
+                "npm-cache",
+                "npm cache",
+                "npm download cache — safe to remove",
+                "npm install will re-download as needed",
+            ),
+            (
+                "Library/Caches/yarn",
+                "yarn-cache",
+                "Yarn cache",
+                "Yarn download cache — safe to remove",
+                "yarn install will re-download as needed",
+            ),
+            (
+                ".bun/install/cache",
+                "bun-cache",
+                "Bun cache",
+                "Bun download cache — safe to remove",
+                "bun install will re-download as needed",
+            ),
         ];
 
         for (dir, category, label, detail, hint) in caches {
@@ -102,7 +120,13 @@ impl Scanner for NodeCacheScanner {
 // --- NodeModulesScanner (Risk Low) ---
 
 const SEARCH_DIRS: &[&str] = &[
-    "Projects", "projects", "dev", "Developer", "Code", "code", "testeProjetos",
+    "Projects",
+    "projects",
+    "dev",
+    "Developer",
+    "Code",
+    "code",
+    "testeProjetos",
 ];
 
 #[async_trait]
@@ -157,7 +181,12 @@ impl Scanner for NodeModulesScanner {
                         let parent = entry
                             .path()
                             .parent()
-                            .map(|p| p.file_name().unwrap_or_default().to_string_lossy().to_string())
+                            .map(|p| {
+                                p.file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy()
+                                    .to_string()
+                            })
                             .unwrap_or_default();
 
                         items.push(ScanResult {
@@ -168,14 +197,19 @@ impl Scanner for NodeModulesScanner {
                             path,
                             size_bytes: size,
                             detail: format!("node_modules in project \"{}\"", parent),
-                            regeneration_hint: "npm install / yarn install / bun install".to_string(),
+                            regeneration_hint: "npm install / yarn install / bun install"
+                                .to_string(),
                         });
                     }
                 }
 
                 // Check for .next/cache
                 if name == "cache"
-                    && entry.path().parent().map(|p| p.file_name().unwrap_or_default() == ".next").unwrap_or(false)
+                    && entry
+                        .path()
+                        .parent()
+                        .map(|p| p.file_name().unwrap_or_default() == ".next")
+                        .unwrap_or(false)
                 {
                     let path = entry.path().to_string_lossy().to_string();
                     let size = scanner::dir_size_bytes(&path).await;

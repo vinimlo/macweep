@@ -31,21 +31,46 @@ pub struct CleanResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ScanProgress {
-    Started { total_scanners: usize },
-    ScannerStarted { category: String },
-    ScannerCompleted { category: String, items_found: usize, bytes: u64 },
-    ScannerFailed { category: String, error: String },
-    Cancelled { completed_scanners: usize, total_scanners: usize },
+    Started {
+        total_scanners: usize,
+    },
+    ScannerStarted {
+        category: String,
+    },
+    ScannerCompleted {
+        category: String,
+        items_found: usize,
+        bytes: u64,
+    },
+    ScannerFailed {
+        category: String,
+        error: String,
+    },
+    Cancelled {
+        completed_scanners: usize,
+        total_scanners: usize,
+    },
     Completed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum CleanProgress {
-    Started { total_items: usize },
-    ItemCompleted { id: String, success: bool, freed_bytes: u64 },
-    Failed { id: String, error: String },
-    Completed { total_freed: u64 },
+    Started {
+        total_items: usize,
+    },
+    ItemCompleted {
+        id: String,
+        success: bool,
+        freed_bytes: u64,
+    },
+    Failed {
+        id: String,
+        error: String,
+    },
+    Completed {
+        total_freed: u64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

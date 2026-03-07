@@ -23,17 +23,16 @@ impl Scanner for BrewScanner {
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let cache_output = Command::new("brew").arg("--cache").output().await?;
-        let cache_path = String::from_utf8_lossy(&cache_output.stdout).trim().to_string();
+        let cache_path = String::from_utf8_lossy(&cache_output.stdout)
+            .trim()
+            .to_string();
 
         if cache_path.is_empty() || !std::path::Path::new(&cache_path).exists() {
             return Ok(vec![]);
         }
 
         // Validate brew cache path is under expected locations
-        let valid_prefixes = [
-            "/opt/homebrew",
-            "/usr/local",
-        ];
+        let valid_prefixes = ["/opt/homebrew", "/usr/local"];
         let home = dirs::home_dir().unwrap_or_default();
         let home_caches = home.join("Library/Caches/Homebrew");
         let is_valid = valid_prefixes.iter().any(|p| cache_path.starts_with(p))
