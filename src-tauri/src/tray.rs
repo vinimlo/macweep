@@ -1,7 +1,7 @@
 use tauri::{
+    AppHandle, Emitter, Manager,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Emitter, Manager,
 };
 
 fn show_main_window(app: &AppHandle) {

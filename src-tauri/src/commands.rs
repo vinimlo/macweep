@@ -1,15 +1,15 @@
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-use tauri::ipc::Channel;
 use tauri::State;
+use tauri::ipc::Channel;
 use tokio::process::Command;
 
+use crate::ScanState;
 use crate::activity::ActivityLogger;
 use crate::models::*;
 use crate::safety::{audit, preflight, protected_paths};
 use crate::scanner;
-use crate::ScanState;
 
 #[tauri::command]
 pub async fn cancel_scan(state: State<'_, ScanState>) -> Result<(), String> {

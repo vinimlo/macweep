@@ -5,8 +5,8 @@ mod safety;
 mod scanner;
 mod tray;
 
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tauri::Manager;
 
 use commands::{

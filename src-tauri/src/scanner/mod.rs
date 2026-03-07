@@ -9,7 +9,7 @@ pub mod system;
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio::process::Command;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use crate::models::{CleanResult, RiskLevel, ScanResult};
 
