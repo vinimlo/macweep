@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">macweep</title>
+
+  <defs>
+    <clipPath id="clip">
+      <rect x="20" y="20" width="472" height="472" rx="105"/>
+    </clipPath>
+
+    <!-- Clean dark background with subtle depth -->
+    <radialGradient id="bg" cx="0.42" cy="0.48" r="0.58">
+      <stop offset="0%" stop-color="#111d32"/>
+      <stop offset="100%" stop-color="#060a14"/>
+    </radialGradient>
+
+    <!-- Subtle color warmth in background — very restrained -->
+    <radialGradient id="bg-teal" cx="0.55" cy="0.45" r="0.45">
+      <stop offset="0%" stop-color="#0e7490" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#0e7490" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Glass specular — top highlight, sharp and defined -->
+    <linearGradient id="glass-top" x1="0.5" y1="0" x2="0.5" y2="0.42">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.11"/>
+      <stop offset="60%" stop-color="#fff" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Glass bottom reflection — subtle -->
+    <linearGradient id="glass-btm" x1="0.5" y1="1" x2="0.5" y2="0.85">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Crisp glass border — bright top-left, subtle elsewhere -->
+    <linearGradient id="glass-edge" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="30%" stop-color="#fff" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#fff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0.1"/>
+    </linearGradient>
+
+    <!-- Sweep gradient -->
+    <linearGradient id="g1" x1="0.05" y1="0.68" x2="0.92" y2="0.32">
+      <stop offset="0%" stop-color="#0e7490"/>
+      <stop offset="28%" stop-color="#06b6d4"/>
+      <stop offset="58%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#a5f3fc"/>
+    </linearGradient>
+
+    <linearGradient id="g2" x1="0.08" y1="0.6" x2="0.92" y2="0.32">
+      <stop offset="0%" stop-color="#0891b2" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+
+    <linearGradient id="g3" x1="0.08" y1="0.75" x2="0.92" y2="0.55">
+      <stop offset="0%" stop-color="#0e7490" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+
+    <radialGradient id="dot">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="30%" stop-color="#cffafe" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Tight glow on sweep only -->
+    <filter id="glow" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Motion trail — contained, not bleeding -->
+    <filter id="trail" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <!-- ═══ BACKGROUND — clean, dark, sharp edges ═══ -->
+  <rect x="20" y="20" width="472" height="472" rx="105" fill="url(#bg)"/>
+
+  <g clip-path="url(#clip)">
+    <!-- Subtle teal warmth in center -->
+    <rect x="20" y="20" width="472" height="472" fill="url(#bg-teal)"/>
+
+    <!-- Glass specular top -->
+    <rect x="20" y="20" width="472" height="280" fill="url(#glass-top)"/>
+
+    <!-- Glass reflection bottom -->
+    <rect x="20" y="352" width="472" height="140" fill="url(#glass-btm)"/>
+
+    <!-- ═══ SWEEP MARK ═══ -->
+
+    <!-- Motion trail -->
+    <path d="M 66,352 C 106,338 172,292 240,250 C 308,208 376,186 448,178 C 376,202 308,254 240,310 C 172,366 106,376 66,366 Z"
+      fill="#06b6d4" opacity="0.2" filter="url(#trail)"/>
+
+    <!-- Leading accent line -->
+    <path d="M 48,310 C 100,288 175,250 260,218 C 345,186 408,170 452,164"
+      fill="none" stroke="url(#g2)" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Trailing accent line -->
+    <path d="M 54,378 C 118,366 194,342 276,318 C 358,294 416,280 458,274"
+      fill="none" stroke="url(#g3)" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Main sweep -->
+    <g filter="url(#glow)">
+      <path d="M 66,348 C 106,336 170,292 240,250 C 310,208 378,186 448,178 C 378,200 310,252 240,308 C 170,364 106,374 66,362 Z"
+        fill="url(#g1)"/>
+    </g>
+
+    <!-- Specular highlight on upper edge -->
+    <path d="M 72,348 C 110,336 172,292 242,250 C 312,208 380,186 448,178"
+      fill="none" stroke="#fff" stroke-opacity="0.2" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Sparkle dots -->
+    <circle cx="440" cy="172" r="14" fill="url(#dot)" opacity="0.7"/>
+    <circle cx="416" cy="190" r="9" fill="url(#dot)" opacity="0.5"/>
+    <circle cx="454" cy="160" r="7" fill="url(#dot)" opacity="0.45"/>
+    <circle cx="456" cy="270" r="8" fill="url(#dot)" opacity="0.3"/>
+    <circle cx="398" cy="178" r="16" fill="url(#dot)" opacity="0.18"/>
+    <circle cx="462" cy="182" r="5" fill="url(#dot)" opacity="0.4"/>
+    <circle cx="56" cy="358" r="9" fill="url(#dot)" opacity="0.15"/>
+  </g>
+
+  <!-- ═══ CRISP GLASS BORDER — no blur filter, sharp 1px ═══ -->
+  <rect x="20" y="20" width="472" height="472" rx="105"
+    fill="none" stroke="url(#glass-edge)" stroke-width="1.5"/>
+</svg>
