@@ -1,4 +1,4 @@
-.PHONY: dev dev-frontend dev-tauri build build-dmg lint test clean help
+.PHONY: dev dev-frontend dev-tauri build build-dmg lint format test clean help
 
 .DEFAULT_GOAL := help
 
@@ -30,6 +30,10 @@ build-dmg: ## Build macOS .dmg bundle (dmgbuild, bypasses broken AppleScript on 
 	mkdir -p src-tauri/target/release/bundle/dmg
 	dmgbuild -s scripts/dmg-settings.py "macweep" \
 		src-tauri/target/release/bundle/dmg/macweep_0.1.0_aarch64.dmg
+
+format: ## Format Rust + frontend code (prettier via Docker)
+	cd src-tauri && source $$HOME/.cargo/env && cargo fmt
+	docker compose run --rm --no-deps frontend npx prettier --write src/
 
 lint: ## Run clippy (Rust) + svelte check
 	cd src-tauri && source $$HOME/.cargo/env && cargo clippy -- -D warnings

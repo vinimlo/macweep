@@ -16,6 +16,7 @@ make dev-frontend   # Frontend only (Docker, port 5173)
 make dev-tauri      # Tauri dev mode only (no Docker)
 make build          # Production build (frontend + Tauri)
 make build-dmg      # macOS .dmg bundle via dmgbuild
+make format         # cargo fmt + prettier (run before finishing work)
 make lint           # cargo clippy + svelte-check
 make test           # cargo test + svelte-check
 make clean          # Stop Docker, clean all build artifacts
@@ -132,6 +133,10 @@ SCAN (parallel) → REPORT (dashboard) → SELECT (user picks) → EXECUTE (risk
 - Docker containers must not be running before volume/image removal
 - Skip cleanup offer if disk >30% free (unless forced)
 - Detect available tools at startup; only enable relevant categories
+
+## Workflow Rules
+
+- **Always run `make format` before finishing any task** — ensures `cargo fmt` and `prettier` pass in CI
 
 ## Anti-Patterns
 

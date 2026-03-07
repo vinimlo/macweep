@@ -12,7 +12,12 @@ async fn has_uncommitted_changes(project_dir: &Path) -> bool {
     let Ok(output) = tokio::time::timeout(
         std::time::Duration::from_secs(5),
         Command::new("git")
-            .args(["-C", &project_dir.to_string_lossy(), "status", "--porcelain"])
+            .args([
+                "-C",
+                &project_dir.to_string_lossy(),
+                "status",
+                "--porcelain",
+            ])
             .output(),
     )
     .await
