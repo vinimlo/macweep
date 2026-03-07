@@ -94,6 +94,16 @@ pub fn command_to_clean_result(item: &ScanResult, output: &std::process::Output)
     }
 }
 
+/// Build a `CleanResult` for a validation-rejected or failed item.
+pub fn error_result(item: &ScanResult, msg: String) -> CleanResult {
+    CleanResult {
+        id: item.id.clone(),
+        freed_bytes: 0,
+        success: false,
+        error: Some(msg),
+    }
+}
+
 /// Parse a size string with separate number and unit parts (e.g. "5.2", "GB").
 pub fn parse_size_with_units(num_str: &str, unit: &str) -> u64 {
     let num: f64 = num_str.trim().parse().unwrap_or(0.0);
@@ -140,12 +150,7 @@ pub async fn clean_filesystem_items(
             continue;
         }
         if let Err(e) = protected_paths::validate_before_delete(path) {
-            results.push(crate::models::CleanResult {
-                id: item.id.clone(),
-                freed_bytes: 0,
-                success: false,
-                error: Some(e.to_string()),
-            });
+            results.push(error_result(item, e.to_string()));
             continue;
         }
         match tokio::fs::remove_dir_all(path).await {
@@ -155,12 +160,7 @@ pub async fn clean_filesystem_items(
                 success: true,
                 error: None,
             }),
-            Err(e) => results.push(crate::models::CleanResult {
-                id: item.id.clone(),
-                freed_bytes: 0,
-                success: false,
-                error: Some(format!("Failed to remove: {}", e)),
-            }),
+            Err(e) => results.push(error_result(item, format!("Failed to remove: {}", e))),
         }
     }
     Ok(results)

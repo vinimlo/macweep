@@ -111,10 +111,11 @@ pub async fn scan_all(
                     .map_err(|e| e.to_string())?;
             }
             Err(e) => {
+                let err_msg = e.to_string();
                 logger.error(
                     Some(&category),
-                    &format!("Scanner failed: {}", e),
-                    Some(&e.to_string()),
+                    &format!("Scanner failed: {}", err_msg),
+                    Some(&err_msg),
                 );
                 completed_count += 1;
                 channel

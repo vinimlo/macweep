@@ -10,16 +10,6 @@ export function riskColor(level: RiskLevel): string {
   return colors[level];
 }
 
-export function riskBgColor(level: RiskLevel): string {
-  const colors: Record<RiskLevel, string> = {
-    Zero: "var(--risk-zero-dim)",
-    Low: "var(--risk-low-dim)",
-    Medium: "var(--risk-medium-dim)",
-    High: "var(--risk-high-dim)",
-  };
-  return colors[level];
-}
-
 export function riskLabel(level: RiskLevel): string {
   const labels: Record<RiskLevel, string> = {
     Zero: "Safe",
@@ -28,16 +18,6 @@ export function riskLabel(level: RiskLevel): string {
     High: "High Risk",
   };
   return labels[level];
-}
-
-export function riskIcon(level: RiskLevel): string {
-  const icons: Record<RiskLevel, string> = {
-    Zero: "\u25CF",
-    Low: "\u25CF",
-    Medium: "\u25B2",
-    High: "\u25C6",
-  };
-  return icons[level];
 }
 
 export function riskOrder(level: RiskLevel): number {

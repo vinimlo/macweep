@@ -26,13 +26,14 @@
 		sortBy = modes[(modes.indexOf(sortBy) + 1) % modes.length];
 	}
 
-	const sortLabel = $derived(
-		sortBy === 'size-desc' ? '↓' : sortBy === 'size-asc' ? '↑' : 'AZ'
-	);
+	const sortConfig: Record<typeof sortBy, { label: string; title: string }> = {
+		'size-desc': { label: '↓', title: 'Largest first' },
+		'size-asc': { label: '↑', title: 'Smallest first' },
+		'name': { label: 'AZ', title: 'Name A–Z' }
+	};
 
-	const sortTitle = $derived(
-		sortBy === 'size-desc' ? 'Largest first' : sortBy === 'size-asc' ? 'Smallest first' : 'Name A–Z'
-	);
+	const sortLabel = $derived(sortConfig[sortBy].label);
+	const sortTitle = $derived(sortConfig[sortBy].title);
 </script>
 
 {#if group}

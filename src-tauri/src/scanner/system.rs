@@ -201,26 +201,20 @@ impl Scanner for LogsScanner {
                 continue;
             }
             if let Err(e) = crate::safety::protected_paths::validate_before_delete(path) {
-                results.push(CleanResult {
-                    id: item.id.clone(),
-                    freed_bytes: 0,
-                    success: false,
-                    error: Some(e.to_string()),
-                });
+                results.push(scanner::error_result(item, e.to_string()));
                 continue;
             }
             let mut ok = true;
             if let Ok(entries) = std::fs::read_dir(path) {
                 for entry in entries.filter_map(|e| e.ok()) {
                     let ep = entry.path();
-                    if ep.is_dir() {
-                        if tokio::fs::remove_dir_all(&ep).await.is_err() {
-                            ok = false;
-                        }
+                    let result = if ep.is_dir() {
+                        tokio::fs::remove_dir_all(&ep).await
                     } else {
-                        if tokio::fs::remove_file(&ep).await.is_err() {
-                            ok = false;
-                        }
+                        tokio::fs::remove_file(&ep).await
+                    };
+                    if result.is_err() {
+                        ok = false;
                     }
                 }
             }

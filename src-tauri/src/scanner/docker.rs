@@ -40,12 +40,10 @@ async fn clean_docker_volumes(items: &[ScanResult]) -> Result<Vec<CleanResult>> 
     let mut results = Vec::new();
     for item in items {
         if !is_valid_volume_name(&item.path) {
-            results.push(CleanResult {
-                id: item.id.clone(),
-                freed_bytes: 0,
-                success: false,
-                error: Some("Invalid Docker volume name".to_string()),
-            });
+            results.push(scanner::error_result(
+                item,
+                "Invalid Docker volume name".to_string(),
+            ));
             continue;
         }
         let output = scanner::run_with_timeout(
@@ -53,20 +51,7 @@ async fn clean_docker_volumes(items: &[ScanResult]) -> Result<Vec<CleanResult>> 
             30,
         )
         .await?;
-        results.push(CleanResult {
-            id: item.id.clone(),
-            freed_bytes: if output.status.success() {
-                item.size_bytes
-            } else {
-                0
-            },
-            success: output.status.success(),
-            error: if output.status.success() {
-                None
-            } else {
-                Some(String::from_utf8_lossy(&output.stderr).to_string())
-            },
-        });
+        results.push(scanner::command_to_clean_result(item, &output));
     }
     Ok(results)
 }
@@ -195,12 +180,10 @@ impl Scanner for DockerImagesScanner {
         let mut results = Vec::new();
         for item in items {
             if !is_valid_docker_id(&item.path) {
-                results.push(CleanResult {
-                    id: item.id.clone(),
-                    freed_bytes: 0,
-                    success: false,
-                    error: Some("Invalid Docker image ID".to_string()),
-                });
+                results.push(scanner::error_result(
+                    item,
+                    "Invalid Docker image ID".to_string(),
+                ));
                 continue;
             }
             let output = scanner::run_with_timeout(

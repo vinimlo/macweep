@@ -155,12 +155,10 @@ impl Scanner for AiToolsScanner {
         for item in &ollama_items {
             let model = item.path.strip_prefix("ollama:").unwrap_or(&item.path);
             if !is_valid_ollama_model(model) {
-                results.push(CleanResult {
-                    id: item.id.clone(),
-                    freed_bytes: 0,
-                    success: false,
-                    error: Some("Invalid model name".to_string()),
-                });
+                results.push(scanner::error_result(
+                    item,
+                    "Invalid model name".to_string(),
+                ));
                 continue;
             }
             let output = Command::new("ollama").args(["rm", model]).output().await?;

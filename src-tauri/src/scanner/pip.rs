@@ -30,15 +30,9 @@ impl Scanner for PipScanner {
         }
 
         let path_str = cache_path.to_string_lossy().to_string();
-        let du_output = Command::new("du").args(["-sk", &path_str]).output().await?;
-        let du_str = String::from_utf8_lossy(&du_output.stdout);
-        let size_kb: u64 = du_str
-            .split_whitespace()
-            .next()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0);
+        let size = scanner::dir_size_bytes(&path_str).await;
 
-        if size_kb == 0 {
+        if size == 0 {
             return Ok(vec![]);
         }
 
@@ -48,7 +42,7 @@ impl Scanner for PipScanner {
             label: "pip cache".to_string(),
             risk_level: self.risk_level(),
             path: path_str,
-            size_bytes: size_kb * 1024,
+            size_bytes: size,
             detail: "pip download cache — safe to remove".to_string(),
             regeneration_hint: "pip install will re-download as needed".to_string(),
             warning: None,

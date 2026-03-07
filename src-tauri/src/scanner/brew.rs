@@ -41,18 +41,9 @@ impl Scanner for BrewScanner {
             return Ok(vec![]);
         }
 
-        let du_output = Command::new("du")
-            .args(["-sk", &cache_path])
-            .output()
-            .await?;
-        let du_str = String::from_utf8_lossy(&du_output.stdout);
-        let size_kb: u64 = du_str
-            .split_whitespace()
-            .next()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0);
+        let size = scanner::dir_size_bytes(&cache_path).await;
 
-        if size_kb == 0 {
+        if size == 0 {
             return Ok(vec![]);
         }
 
@@ -62,7 +53,7 @@ impl Scanner for BrewScanner {
             label: "Homebrew cache".to_string(),
             risk_level: self.risk_level(),
             path: cache_path,
-            size_bytes: size_kb * 1024,
+            size_bytes: size,
             detail: "Homebrew download cache — safe to remove".to_string(),
             regeneration_hint: "brew install will re-download as needed".to_string(),
             warning: None,

@@ -6,10 +6,6 @@ export function formatSize(bytes: number): string {
   return `${size.toFixed(i > 1 ? 1 : 0)} ${units[i]}`;
 }
 
-export function sumBytes(items: { size_bytes: number }[]): number {
-  return items.reduce((sum, i) => sum + i.size_bytes, 0);
-}
-
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
@@ -27,6 +23,12 @@ export function formatDuration(ms: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}m ${remainingSeconds}s`;
+}
+
+export function diskColor(percent: number, fallback: string): string {
+  if (percent > 85) return "var(--risk-high)";
+  if (percent > 70) return "var(--risk-medium)";
+  return fallback;
 }
 
 export function formatPercent(value: number): string {

@@ -4,7 +4,7 @@
 	import { scanStore } from '$lib/stores/scan.svelte';
 	import { activityStore } from '$lib/stores/activity.svelte';
 	import { getDiskInfo, getActivityLog } from '$lib/tauri/commands';
-	import { formatSize, formatPercent } from '$lib/utils/format';
+	import { formatSize, formatPercent, diskColor } from '$lib/utils/format';
 	import ToastContainer from '$lib/components/shared/ToastContainer.svelte';
 	import ActivityDrawer from '$lib/components/shared/ActivityDrawer.svelte';
 	import FloatingCleanBar from '$lib/components/shared/FloatingCleanBar.svelte';
@@ -54,6 +54,8 @@
 			? (appStore.diskInfo.used_bytes / appStore.diskInfo.total_bytes) * 100
 			: 0
 	);
+
+	const diskRingColor = $derived(diskColor(diskPercent, 'var(--accent)'));
 </script>
 
 <div class="app">
@@ -94,7 +96,7 @@
 						<circle
 							cx="9" cy="9" r="7"
 							fill="none"
-							stroke={diskPercent > 85 ? 'var(--risk-high)' : diskPercent > 70 ? 'var(--risk-medium)' : 'var(--accent)'}
+							stroke={diskRingColor}
 							stroke-width="2"
 							stroke-dasharray={2 * Math.PI * 7}
 							stroke-dashoffset={2 * Math.PI * 7 * (1 - diskPercent / 100)}

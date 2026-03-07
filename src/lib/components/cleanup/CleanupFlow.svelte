@@ -17,6 +17,13 @@
 	let step = $state<Step>('zero');
 	let itemsToClean = $state<ScanResult[]>([]);
 
+	const stepLabels: Record<string, string> = {
+		zero: 'Safe',
+		low: 'Low',
+		medium: 'Medium',
+		high: 'High'
+	};
+
 	const steps: Step[] = ['zero', 'low', 'medium', 'high'];
 	const zeroItems = $derived(cleanupStore.selectedItems.filter((i) => i.risk_level === 'Zero'));
 	const lowItems = $derived(cleanupStore.selectedItems.filter((i) => i.risk_level === 'Low'));
@@ -76,7 +83,7 @@
 				{#if hasItems}
 					<div class="step" class:active={step === s} class:done={currentStepIndex > i}>
 						<span class="step-dot"></span>
-						<span class="step-label">{s === 'zero' ? 'Safe' : s === 'low' ? 'Low' : s === 'medium' ? 'Medium' : 'High'}</span>
+						<span class="step-label">{stepLabels[s]}</span>
 					</div>
 				{/if}
 			{/each}

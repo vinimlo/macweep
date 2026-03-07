@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { DiskInfo } from '$lib/tauri/types';
 	import { scanStore } from '$lib/stores/scan.svelte';
-	import { formatSize, formatPercent } from '$lib/utils/format';
+	import { formatSize, formatPercent, diskColor } from '$lib/utils/format';
 
 	let { info }: { info: DiskInfo } = $props();
 
@@ -20,9 +20,7 @@
 	const usedOffset = $derived(circumference * (1 - usedPercent / 100));
 	const recoverableOffset = $derived(circumference * (1 - recoverablePercent / 100));
 
-	const ringColor = $derived(
-		usedPercent > 85 ? 'var(--risk-high)' : usedPercent > 70 ? 'var(--risk-medium)' : 'var(--text-muted)'
-	);
+	const ringColor = $derived(diskColor(usedPercent, 'var(--text-muted)'));
 </script>
 
 <div class="gauge">

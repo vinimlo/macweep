@@ -72,7 +72,8 @@ pub fn read_log(limit: usize) -> anyhow::Result<Vec<AuditEntry>> {
 
     let file = fs::File::open(path)?;
     let reader = BufReader::new(file);
-    let mut entries: Vec<AuditEntry> = Vec::new();
+    let mut entries: std::collections::VecDeque<AuditEntry> =
+        std::collections::VecDeque::with_capacity(limit);
 
     for line in reader.lines() {
         let line = line?;
@@ -80,11 +81,12 @@ pub fn read_log(limit: usize) -> anyhow::Result<Vec<AuditEntry>> {
             continue;
         }
         if let Ok(entry) = serde_json::from_str::<AuditEntry>(&line) {
-            entries.push(entry);
+            if entries.len() == limit {
+                entries.pop_front();
+            }
+            entries.push_back(entry);
         }
     }
 
-    // Return the most recent entries
-    let start = entries.len().saturating_sub(limit);
-    Ok(entries[start..].to_vec())
+    Ok(entries.into())
 }

@@ -90,16 +90,34 @@ impl ActivityLogger {
         }
     }
 
-    pub fn info(&self, category: Option<&str>, message: &str) {
-        self.log(&ActivityEntry {
+    fn entry(
+        level: ActivityLevel,
+        category: Option<&str>,
+        message: &str,
+        detail: Option<&str>,
+        command: Option<&str>,
+        duration_ms: Option<u64>,
+    ) -> ActivityEntry {
+        ActivityEntry {
             timestamp: Utc::now(),
-            level: ActivityLevel::Info,
+            level,
             category: category.map(|s| s.to_string()),
             message: message.to_string(),
-            detail: None,
-            command: None,
-            duration_ms: None,
-        });
+            detail: detail.map(|s| s.to_string()),
+            command: command.map(|s| s.to_string()),
+            duration_ms,
+        }
+    }
+
+    pub fn info(&self, category: Option<&str>, message: &str) {
+        self.log(&Self::entry(
+            ActivityLevel::Info,
+            category,
+            message,
+            None,
+            None,
+            None,
+        ));
     }
 
     pub fn command(
@@ -109,15 +127,14 @@ impl ActivityLogger {
         cmd: &str,
         duration_ms: Option<u64>,
     ) {
-        self.log(&ActivityEntry {
-            timestamp: Utc::now(),
-            level: ActivityLevel::Command,
-            category: category.map(|s| s.to_string()),
-            message: message.to_string(),
-            detail: None,
-            command: Some(cmd.to_string()),
+        self.log(&Self::entry(
+            ActivityLevel::Command,
+            category,
+            message,
+            None,
+            Some(cmd),
             duration_ms,
-        });
+        ));
     }
 
     pub fn success(
@@ -127,39 +144,36 @@ impl ActivityLogger {
         detail: Option<&str>,
         duration_ms: Option<u64>,
     ) {
-        self.log(&ActivityEntry {
-            timestamp: Utc::now(),
-            level: ActivityLevel::Success,
-            category: category.map(|s| s.to_string()),
-            message: message.to_string(),
-            detail: detail.map(|s| s.to_string()),
-            command: None,
+        self.log(&Self::entry(
+            ActivityLevel::Success,
+            category,
+            message,
+            detail,
+            None,
             duration_ms,
-        });
+        ));
     }
 
     pub fn warning(&self, category: Option<&str>, message: &str, detail: Option<&str>) {
-        self.log(&ActivityEntry {
-            timestamp: Utc::now(),
-            level: ActivityLevel::Warning,
-            category: category.map(|s| s.to_string()),
-            message: message.to_string(),
-            detail: detail.map(|s| s.to_string()),
-            command: None,
-            duration_ms: None,
-        });
+        self.log(&Self::entry(
+            ActivityLevel::Warning,
+            category,
+            message,
+            detail,
+            None,
+            None,
+        ));
     }
 
     pub fn error(&self, category: Option<&str>, message: &str, detail: Option<&str>) {
-        self.log(&ActivityEntry {
-            timestamp: Utc::now(),
-            level: ActivityLevel::Error,
-            category: category.map(|s| s.to_string()),
-            message: message.to_string(),
-            detail: detail.map(|s| s.to_string()),
-            command: None,
-            duration_ms: None,
-        });
+        self.log(&Self::entry(
+            ActivityLevel::Error,
+            category,
+            message,
+            detail,
+            None,
+            None,
+        ));
     }
 }
 
