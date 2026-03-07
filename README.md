@@ -215,7 +215,7 @@ macweep --scan --json         # Machine-readable output
 **Key decisions:**
 - **Channel API** for scan progress (ordered delivery, not Tauri events)
 - **`tokio::process::Command`** for cleanup execution (not Shell Plugin — full control)
-- **CSS puro** — scoped styles, no Tailwind, for a native macOS feel
+- **pure CSS** — scoped styles, no Tailwind, for a native macOS feel
 - **Scanner trait** — each category is a pluggable Rust struct implementing `scan()` + `clean()`
 
 ---

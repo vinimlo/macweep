@@ -247,8 +247,8 @@ After research, the bash CLI approach was **replaced** with a native macOS deskt
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
 | **Backend** | **Rust** (via Tauri v2) | Safe system-level operations, `tokio::process::Command` for cleanup commands, protected paths enforcement at compile level |
-| **Frontend** | **SvelteKit 2 + Svelte 5** (runes) | Consistent with duck-os stack; CSS puro (scoped styles, no Tailwind) for a polished native feel |
-| **Distribution** | `.dmg` nativo macOS | Single file install, no Homebrew dependency, no runtime requirements |
+| **Frontend** | **SvelteKit 2 + Svelte 5** (runes) | Consistent with duck-os stack; pure CSS (scoped styles, no Tailwind) for a polished native feel |
+| **Distribution** | `.dmg` native macOS | Single file install, no Homebrew dependency, no runtime requirements |
 
 **Why not bash?** The risk categorization model, interactive dashboard, and confirmation flows are better served by a proper UI. Tauri v2 gives native performance with minimal overhead (~5 MB binary). The safety module benefits from Rust's type system (protected paths as compile-time constants, `RiskLevel` enum enforced at type level).
 

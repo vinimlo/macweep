@@ -28,7 +28,7 @@ make clean          # Stop Docker, clean all build artifacts
 | Layer | Technology |
 |-------|-----------|
 | Backend | Rust (Tauri v2), async via tokio |
-| Frontend | SvelteKit 2 + Svelte 5 (runes), CSS puro (scoped styles, no Tailwind) |
+| Frontend | SvelteKit 2 + Svelte 5 (runes), pure CSS (scoped styles, no Tailwind) |
 | Dev env | Docker Compose for frontend (hot reload on port 5173), Tauri on host (needs native webview) |
 | Distribution | macOS `.dmg` native app |
 
@@ -143,7 +143,7 @@ SCAN (parallel) → REPORT (dashboard) → SELECT (user picks) → EXECUTE (risk
 
 - Do not offer cleanup of protected paths under any circumstance
 - Do not remove Docker volumes/images while containers are running
-- Do not use Tailwind — CSS puro (scoped styles) for native macOS feel
+- Do not use Tailwind — pure CSS (scoped styles) for native macOS feel
 - Do not use Tauri Shell Plugin — use `tokio::process::Command` directly
 - Do not use Tauri events for scan progress — use Channel API (ordered delivery)
 - System tray uses events, not direct JS evaluation for window communication
