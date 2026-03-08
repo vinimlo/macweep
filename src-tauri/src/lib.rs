@@ -18,6 +18,23 @@ pub struct ScanState {
     pub cancelled: Arc<AtomicBool>,
 }
 
+/// Extend PATH to include common macOS developer tool locations.
+/// GUI apps launched from Finder inherit a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin)
+/// which misses /usr/local/bin (Docker CLI) and /opt/homebrew/bin (Homebrew).
+fn extend_path() {
+    let extra_paths = ["/usr/local/bin", "/opt/homebrew/bin", "/opt/homebrew/sbin"];
+    let current = std::env::var("PATH").unwrap_or_default();
+    let mut paths: Vec<&str> = current.split(':').collect();
+    for p in &extra_paths {
+        if !paths.contains(p) {
+            paths.push(p);
+        }
+    }
+    unsafe {
+        std::env::set_var("PATH", paths.join(":"));
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -34,6 +51,8 @@ pub fn run() {
             run_preflight,
         ])
         .setup(|app| {
+            extend_path();
+
             let logger = activity::ActivityLogger::new(app.handle().clone())
                 .map_err(|e| format!("Failed to initialize activity logger: {e}"))?;
             logger.info(None, "macweep started");
