@@ -131,14 +131,21 @@ pub fn parse_size_with_units(num_str: &str, unit: &str) -> u64 {
     }
 }
 
-/// Check if a command-line tool is available via `which`.
+/// Check if a command-line tool exists in any PATH directory.
+/// Probes the filesystem directly instead of shelling out to `which`,
+/// which may not resolve correctly in GUI app contexts.
 pub async fn tool_installed(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .output()
-        .await
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    let path_var = std::env::var("PATH").unwrap_or_default();
+    for dir in path_var.split(':') {
+        if dir.is_empty() {
+            continue;
+        }
+        let full = format!("{}/{}", dir, cmd);
+        if tokio::fs::metadata(&full).await.is_ok() {
+            return true;
+        }
+    }
+    false
 }
 
 /// Clean filesystem items with the standard validate-and-remove pattern.

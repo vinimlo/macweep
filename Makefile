@@ -28,8 +28,9 @@ build: ## Build frontend + Tauri for production
 build-dmg: ## Build macOS .dmg bundle (dmgbuild, bypasses broken AppleScript on macOS 26)
 	source $$HOME/.cargo/env && cargo tauri build --bundles app
 	mkdir -p src-tauri/target/release/bundle/dmg
+	$(eval VERSION := $(shell python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])"))
 	dmgbuild -s scripts/dmg-settings.py "macweep" \
-		src-tauri/target/release/bundle/dmg/macweep_0.1.0_aarch64.dmg
+		src-tauri/target/release/bundle/dmg/macweep_$(VERSION)_aarch64.dmg
 
 format: ## Format Rust + frontend code (prettier via Docker)
 	cd src-tauri && source $$HOME/.cargo/env && cargo fmt

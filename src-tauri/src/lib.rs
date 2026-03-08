@@ -18,25 +18,73 @@ pub struct ScanState {
     pub cancelled: Arc<AtomicBool>,
 }
 
-/// Extend PATH to include common macOS developer tool locations.
-/// GUI apps launched from Finder inherit a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin)
-/// which misses /usr/local/bin (Docker CLI) and /opt/homebrew/bin (Homebrew).
+/// Extend PATH so child processes (docker, brew, npm, etc.) can be found.
+///
+/// GUI apps launched from Finder inherit a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin).
+/// We replicate what `/usr/libexec/path_helper` does: read `/etc/paths` and `/etc/paths.d/*`,
+/// then merge with the current PATH and add hardcoded fallbacks.
 fn extend_path() {
-    let extra_paths = ["/usr/local/bin", "/opt/homebrew/bin", "/opt/homebrew/sbin"];
-    let current = std::env::var("PATH").unwrap_or_default();
-    let mut paths: Vec<&str> = current.split(':').collect();
-    for p in &extra_paths {
-        if !paths.contains(p) {
-            paths.push(p);
+    use std::collections::HashSet;
+
+    let mut system_paths: Vec<String> = Vec::new();
+
+    // 1. Read /etc/paths (one directory per line)
+    if let Ok(contents) = std::fs::read_to_string("/etc/paths") {
+        for line in contents.lines() {
+            let p = line.trim();
+            if !p.is_empty() {
+                system_paths.push(p.to_string());
+            }
         }
     }
-    unsafe {
-        std::env::set_var("PATH", paths.join(":"));
+
+    // 2. Read /etc/paths.d/* (one directory per line per file, sorted by filename)
+    if let Ok(entries) = std::fs::read_dir("/etc/paths.d") {
+        let mut files: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+        files.sort_by_key(|e| e.file_name());
+        for entry in files {
+            if let Ok(contents) = std::fs::read_to_string(entry.path()) {
+                for line in contents.lines() {
+                    let p = line.trim();
+                    if !p.is_empty() {
+                        system_paths.push(p.to_string());
+                    }
+                }
+            }
+        }
     }
+
+    // 3. Hardcoded fallbacks (in case /etc/paths.d is incomplete)
+    for p in ["/usr/local/bin", "/opt/homebrew/bin", "/opt/homebrew/sbin"] {
+        system_paths.push(p.to_string());
+    }
+
+    // 4. Merge: current PATH first, then system paths — deduplicated
+    let current = std::env::var("PATH").unwrap_or_default();
+    let mut seen = HashSet::new();
+    let mut final_paths: Vec<String> = Vec::new();
+
+    for p in current
+        .split(':')
+        .chain(system_paths.iter().map(|s| s.as_str()))
+    {
+        if !p.is_empty() && seen.insert(p.to_string()) {
+            final_paths.push(p.to_string());
+        }
+    }
+
+    let joined = final_paths.join(":");
+    unsafe {
+        std::env::set_var("PATH", &joined);
+    }
+    eprintln!("[macweep] PATH set to: {}", joined);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Must run before Builder — GUI apps inherit a minimal PATH from Finder
+    extend_path();
+
     tauri::Builder::default()
         .manage(ScanState {
             cancelled: Arc::new(AtomicBool::new(false)),
@@ -51,8 +99,6 @@ pub fn run() {
             run_preflight,
         ])
         .setup(|app| {
-            extend_path();
-
             let logger = activity::ActivityLogger::new(app.handle().clone())
                 .map_err(|e| format!("Failed to initialize activity logger: {e}"))?;
             logger.info(None, "macweep started");
