@@ -35,12 +35,15 @@ pub fn run() {
         ])
         .setup(|app| {
             let logger = activity::ActivityLogger::new(app.handle().clone())
-                .expect("Failed to initialize activity logger");
+                .map_err(|e| format!("Failed to initialize activity logger: {e}"))?;
             logger.info(None, "macweep started");
             app.manage(logger);
             tray::setup_tray(app.handle())?;
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running macweep");
+        .unwrap_or_else(|e| {
+            eprintln!("macweep failed to start: {e}");
+            std::process::exit(1);
+        });
 }

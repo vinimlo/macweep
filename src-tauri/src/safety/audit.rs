@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 use crate::models::{CleanResult, ScanResult};
@@ -23,19 +22,6 @@ fn audit_path() -> PathBuf {
     super::ensure_log_dir().join("audit.jsonl")
 }
 
-fn open_audit_file() -> anyhow::Result<File> {
-    let mut opts = OpenOptions::new();
-    opts.create(true).append(true);
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        opts.mode(0o600);
-    }
-
-    Ok(opts.open(audit_path())?)
-}
-
 fn build_entry(item: &ScanResult, result: &CleanResult) -> AuditEntry {
     AuditEntry {
         timestamp: Utc::now(),
@@ -54,7 +40,12 @@ pub fn log_cleanup_batch(pairs: &[(ScanResult, CleanResult)]) -> anyhow::Result<
     if pairs.is_empty() {
         return Ok(());
     }
-    let mut file = open_audit_file()?;
+
+    // Rotate if over 10,000 entries (cap unbounded growth)
+    let path = audit_path();
+    rotate_if_needed(&path);
+
+    let mut file = super::open_append_secure(&path)?;
     for (item, result) in pairs {
         let entry = build_entry(item, result);
         let json = serde_json::to_string(&entry)?;
@@ -64,29 +55,17 @@ pub fn log_cleanup_batch(pairs: &[(ScanResult, CleanResult)]) -> anyhow::Result<
     Ok(())
 }
 
+fn rotate_if_needed(path: &std::path::Path) {
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return;
+    };
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.len() > 10_000 {
+        let kept = &lines[lines.len() - 5_000..];
+        let _ = std::fs::write(path, kept.join("\n") + "\n");
+    }
+}
+
 pub fn read_log(limit: usize) -> anyhow::Result<Vec<AuditEntry>> {
-    let path = audit_path();
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let file = fs::File::open(path)?;
-    let reader = BufReader::new(file);
-    let mut entries: std::collections::VecDeque<AuditEntry> =
-        std::collections::VecDeque::with_capacity(limit);
-
-    for line in reader.lines() {
-        let line = line?;
-        if line.trim().is_empty() {
-            continue;
-        }
-        if let Ok(entry) = serde_json::from_str::<AuditEntry>(&line) {
-            if entries.len() == limit {
-                entries.pop_front();
-            }
-            entries.push_back(entry);
-        }
-    }
-
-    Ok(entries.into())
+    super::read_jsonl_tail(&audit_path(), limit)
 }

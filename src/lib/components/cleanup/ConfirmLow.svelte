@@ -8,7 +8,8 @@
 		onskip: () => void;
 	} = $props();
 
-	let selected = $state<Set<string>>(new Set(items.map((i) => i.id)));
+	function getAllIds() { return new Set(items.map((i) => i.id)); }
+	let selected = $state<Set<string>>(getAllIds());
 
 	function toggle(id: string) {
 		const next = new Set(selected);
@@ -17,7 +18,7 @@
 		selected = next;
 	}
 
-	function selectAll() { selected = new Set(items.map((i) => i.id)); }
+	function selectAll() { selected = getAllIds(); }
 	function selectNone() { selected = new Set(); }
 
 	const selectedItems = $derived(items.filter((i) => selected.has(i.id)));

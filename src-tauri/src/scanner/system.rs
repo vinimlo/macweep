@@ -49,22 +49,20 @@ impl Scanner for SystemCacheScanner {
 
         for (dir, category, label, detail, hint) in caches {
             let cache_dir = home.join(dir);
-            if cache_dir.exists() {
-                let path = cache_dir.to_string_lossy().to_string();
-                let size = scanner::dir_size_bytes(&path).await;
-                if size > 0 {
-                    items.push(ScanResult {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        category: category.to_string(),
-                        label: label.to_string(),
-                        risk_level: RiskLevel::Zero,
-                        path,
-                        size_bytes: size,
-                        detail: detail.to_string(),
-                        regeneration_hint: hint.to_string(),
-                        warning: None,
-                    });
-                }
+            let path = cache_dir.to_string_lossy().to_string();
+            let size = scanner::dir_size_bytes(&path).await;
+            if size > 0 {
+                items.push(ScanResult {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    category: category.to_string(),
+                    label: label.to_string(),
+                    risk_level: RiskLevel::Zero,
+                    path,
+                    size_bytes: size,
+                    detail: detail.to_string(),
+                    regeneration_hint: hint.to_string(),
+                    warning: None,
+                });
             }
         }
 
@@ -192,12 +190,7 @@ impl Scanner for LogsScanner {
         for item in items {
             let path = std::path::Path::new(&item.path);
             if !path.exists() {
-                results.push(CleanResult {
-                    id: item.id.clone(),
-                    freed_bytes: item.size_bytes,
-                    success: true,
-                    error: None,
-                });
+                results.push(scanner::success_result(item));
                 continue;
             }
             if let Err(e) = crate::safety::protected_paths::validate_before_delete(path) {

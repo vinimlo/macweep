@@ -37,30 +37,25 @@ impl Scanner for IdeScanner {
 
         for (dir_name, app_name, label) in ide_dirs {
             let dir = home.join(dir_name);
-            if dir.exists() {
-                let installed = app_installed(app_name);
-                let path = dir.to_string_lossy().to_string();
-                let size = scanner::dir_size_bytes(&path).await;
-                if size > 0 {
-                    items.push(ScanResult {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        category: self.category().to_string(),
-                        label: format!("{} config", label),
-                        risk_level: self.risk_level(),
-                        path,
-                        size_bytes: size,
-                        detail: if installed {
-                            format!("{} is installed — config may be in use", label)
-                        } else {
-                            format!("{} is NOT installed — config is likely stale", label)
-                        },
-                        regeneration_hint: format!(
-                            "{} will recreate config on first launch",
-                            label
-                        ),
-                        warning: None,
-                    });
-                }
+            let installed = app_installed(app_name);
+            let path = dir.to_string_lossy().to_string();
+            let size = scanner::dir_size_bytes(&path).await;
+            if size > 0 {
+                items.push(ScanResult {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    category: self.category().to_string(),
+                    label: format!("{} config", label),
+                    risk_level: self.risk_level(),
+                    path,
+                    size_bytes: size,
+                    detail: if installed {
+                        format!("{} is installed — config may be in use", label)
+                    } else {
+                        format!("{} is NOT installed — config is likely stale", label)
+                    },
+                    regeneration_hint: format!("{} will recreate config on first launch", label),
+                    warning: None,
+                });
             }
         }
 

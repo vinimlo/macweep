@@ -16,7 +16,6 @@ class ScanStore {
   scanDurationMs = $state(0);
   availableTools = $state<string[]>([]);
   diskFreePercent = $state(0);
-  error = $state<string | null>(null);
 
   // Progress tracking
   totalScanners = $state(0);
@@ -115,7 +114,6 @@ class ScanStore {
     this.items = [];
     this.totalBytes = 0;
     this.scanDurationMs = 0;
-    this.error = null;
     this.totalScanners = 0;
     this.currentScanner = null;
     this.completedScanners = 0;

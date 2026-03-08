@@ -24,11 +24,6 @@ impl Scanner for PipScanner {
     async fn scan(&self) -> Result<Vec<ScanResult>> {
         let home = dirs::home_dir().unwrap_or_default();
         let cache_path = home.join("Library/Caches/pip");
-
-        if !cache_path.exists() {
-            return Ok(vec![]);
-        }
-
         let path_str = cache_path.to_string_lossy().to_string();
         let size = scanner::dir_size_bytes(&path_str).await;
 

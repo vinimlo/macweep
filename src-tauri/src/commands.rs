@@ -8,7 +8,7 @@ use tokio::process::Command;
 use crate::ScanState;
 use crate::activity::ActivityLogger;
 use crate::models::*;
-use crate::safety::{audit, preflight, protected_paths};
+use crate::safety::{audit, preflight};
 use crate::scanner;
 
 #[tauri::command]
@@ -185,13 +185,6 @@ pub async fn clean_items(
         }
     }
 
-    // Validate no protected paths
-    for item in &items {
-        if protected_paths::is_protected(&item.path) {
-            return Err(format!("Refusing to clean protected path: {}", item.path));
-        }
-    }
-
     // Enforce Docker preflight: refuse Docker cleanup if containers are running
     let has_docker_items = items
         .iter()
@@ -337,7 +330,7 @@ async fn disk_info_or_default() -> DiskInfo {
     })
 }
 
-async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
+pub(crate) async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
     let output = Command::new("df").args(["-k", "/"]).output().await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);

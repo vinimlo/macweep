@@ -103,9 +103,6 @@ impl Scanner for AiToolsScanner {
 
             for subpath in *dirs {
                 let dir = home.join(subpath);
-                if !dir.exists() {
-                    continue;
-                }
                 let path = dir.to_string_lossy().to_string();
                 let size = scanner::dir_size_bytes(&path).await;
                 if size == 0 {

@@ -8,7 +8,7 @@ Thanks for your interest in contributing to macweep! This guide covers the basic
 
 - macOS 14+
 - [Rust](https://rustup.rs/) (stable)
-- [Node.js](https://nodejs.org/) 20+
+- [Node.js](https://nodejs.org/) 22+
 - [Docker](https://www.docker.com/) (for frontend dev container)
 - Tauri v2 prerequisites: Xcode Command Line Tools
 

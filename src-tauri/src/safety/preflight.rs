@@ -43,23 +43,8 @@ async fn check_docker() -> (bool, bool) {
 }
 
 async fn check_disk_free() -> anyhow::Result<f64> {
-    let output = Command::new("df").args(["-k", "/"]).output().await?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout
-        .lines()
-        .nth(1)
-        .ok_or_else(|| anyhow::anyhow!("df parse error"))?;
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() < 4 {
-        anyhow::bail!("unexpected df format");
-    }
-    let total: f64 = parts[1].parse()?;
-    let free: f64 = parts[3].parse()?;
-    Ok(if total > 0.0 {
-        (free / total) * 100.0
-    } else {
-        0.0
-    })
+    let info = crate::commands::get_disk_info_internal().await?;
+    Ok(info.free_percent)
 }
 
 async fn detect_tools() -> Vec<String> {

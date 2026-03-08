@@ -1,13 +1,4 @@
 <script lang="ts">
-	import { appStore, type ExecutionMode } from '$lib/stores/app.svelte';
-
-	const modes: { value: ExecutionMode; label: string; description: string }[] = [
-		{ value: 'interactive', label: 'Interactive', description: 'Full dashboard with scan, select, and confirm flow' },
-		{ value: 'scan-only', label: 'Scan Only', description: 'Report only, no cleanup actions' },
-		{ value: 'safe', label: 'Safe Mode', description: 'Auto-clean only risk-zero items' },
-		{ value: 'dry-run', label: 'Dry Run', description: 'Show what would be done without executing' }
-	];
-
 	const protectedPaths = [
 		'~/Documents/', '~/Desktop/', '~/Downloads/', '~/Pictures/', '~/Photos/',
 		'~/Library/Keychains/', '~/Library/Application Support/MobileSync/',
@@ -17,29 +8,6 @@
 
 <div class="settings-page">
 	<h2>Settings</h2>
-
-	<section>
-		<span class="section-label">Execution Mode</span>
-		<div class="modes">
-			{#each modes as mode (mode.value)}
-				<label class="mode" class:active={appStore.executionMode === mode.value}>
-					<div class="radio-wrap">
-						<input
-							type="radio"
-							name="mode"
-							value={mode.value}
-							bind:group={appStore.executionMode}
-						/>
-						<span class="radio-indicator"></span>
-					</div>
-					<div class="mode-content">
-						<span class="mode-label">{mode.label}</span>
-						<span class="mode-desc">{mode.description}</span>
-					</div>
-				</label>
-			{/each}
-		</div>
-	</section>
 
 	<section>
 		<span class="section-label">Protected Paths</span>
@@ -107,96 +75,6 @@
 		font-size: 12px;
 		color: var(--text-secondary);
 		margin-top: -4px;
-	}
-
-	.modes {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-sm);
-	}
-
-	.mode {
-		display: flex;
-		gap: var(--space-md);
-		padding: var(--space-md);
-		background: var(--bg-raised);
-		border: 1px solid var(--border-subtle);
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		transition: all var(--duration-fast);
-	}
-
-	.mode:hover {
-		border-color: var(--border-default);
-		background: var(--bg-surface);
-	}
-
-	.mode.active {
-		border-color: var(--border-accent);
-		background: var(--accent-glow);
-	}
-
-	.radio-wrap {
-		position: relative;
-		width: 16px;
-		height: 16px;
-		margin-top: 1px;
-		flex-shrink: 0;
-	}
-
-	.radio-wrap input {
-		position: absolute;
-		opacity: 0;
-		width: 100%;
-		height: 100%;
-		cursor: pointer;
-	}
-
-	.radio-indicator {
-		display: block;
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		border: 1.5px solid var(--border-hover);
-		background: var(--bg-base);
-		transition: all var(--duration-fast);
-	}
-
-	.radio-indicator::after {
-		content: '';
-		position: absolute;
-		top: 4px;
-		left: 4px;
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--accent);
-		transform: scale(0);
-		transition: transform var(--duration-fast) var(--ease-spring);
-	}
-
-	.mode.active .radio-indicator {
-		border-color: var(--accent);
-	}
-
-	.mode.active .radio-indicator::after {
-		transform: scale(1);
-	}
-
-	.mode-content {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.mode-label {
-		font-weight: 600;
-		font-size: 12px;
-	}
-
-	.mode-desc {
-		font-size: 11px;
-		color: var(--text-secondary);
 	}
 
 	.protected-list {

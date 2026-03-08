@@ -27,7 +27,6 @@
 			}
 		} catch (e) {
 			if (!wasCancelled) {
-				scanStore.error = sanitizeError(e);
 				toastStore.error(`Scan failed: ${sanitizeError(e)}`);
 			}
 		}

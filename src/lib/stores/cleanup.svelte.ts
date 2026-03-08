@@ -9,7 +9,6 @@ class CleanupStore {
   totalFreed = $state(0);
   totalItems = $state(0);
   completedItems = $state(0);
-  error = $state<string | null>(null);
 
   select(items: ScanResult[]) {
     this.selectedItems = items;
@@ -40,7 +39,6 @@ class CleanupStore {
         break;
       case "ItemCompleted":
         this.completedItems++;
-        this.totalFreed += progress.freed_bytes;
         break;
       case "Failed":
         this.completedItems++;
@@ -64,7 +62,6 @@ class CleanupStore {
     this.totalFreed = 0;
     this.totalItems = 0;
     this.completedItems = 0;
-    this.error = null;
   }
 }
 

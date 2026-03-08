@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -51,16 +50,7 @@ impl ActivityLogger {
             Self::rotate(&path);
         }
 
-        let mut opts = OpenOptions::new();
-        opts.create(true).append(true);
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            opts.mode(0o600);
-        }
-
-        let file = opts.open(&path)?;
+        let file = crate::safety::open_append_secure(&path)?;
 
         Ok(Self {
             app_handle,
@@ -178,27 +168,5 @@ impl ActivityLogger {
 }
 
 pub fn read_log(limit: usize) -> anyhow::Result<Vec<ActivityEntry>> {
-    let path = activity_path();
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let file = fs::File::open(path)?;
-    let reader = BufReader::new(file);
-    let mut entries: VecDeque<ActivityEntry> = VecDeque::with_capacity(limit);
-
-    for line in reader.lines() {
-        let line = line?;
-        if line.trim().is_empty() {
-            continue;
-        }
-        if let Ok(entry) = serde_json::from_str::<ActivityEntry>(&line) {
-            if entries.len() == limit {
-                entries.pop_front();
-            }
-            entries.push_back(entry);
-        }
-    }
-
-    Ok(entries.into())
+    crate::safety::read_jsonl_tail(&activity_path(), limit)
 }

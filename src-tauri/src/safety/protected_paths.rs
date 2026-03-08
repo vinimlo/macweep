@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 const PROTECTED_PATHS: &[&str] = &[
     "~/Documents",
@@ -23,6 +24,20 @@ fn expand_tilde(path: &str) -> PathBuf {
     }
 }
 
+static EXPANDED_PROTECTED: OnceLock<Vec<PathBuf>> = OnceLock::new();
+
+fn get_expanded_paths() -> &'static Vec<PathBuf> {
+    EXPANDED_PROTECTED.get_or_init(|| {
+        PROTECTED_PATHS
+            .iter()
+            .map(|p| {
+                let expanded = expand_tilde(p);
+                std::fs::canonicalize(&expanded).unwrap_or(expanded)
+            })
+            .collect()
+    })
+}
+
 /// Check if a path is protected. Returns true (protected) on any error (fail-safe).
 /// Uses canonicalize() to resolve symlinks and Path::starts_with() for component-level matching.
 /// Case-insensitive on macOS (APFS default).
@@ -36,14 +51,10 @@ fn is_protected_inner(path: &str) -> anyhow::Result<bool> {
     // Resolve symlinks to get the real path
     let canonical = std::fs::canonicalize(&expanded).unwrap_or(expanded);
 
-    for protected in PROTECTED_PATHS {
-        let protected_expanded = expand_tilde(protected);
-        let protected_canonical =
-            std::fs::canonicalize(&protected_expanded).unwrap_or(protected_expanded);
-
+    for protected_canonical in get_expanded_paths() {
         // Component-level path matching (not string prefix)
         // Case-insensitive for macOS APFS
-        if paths_match_case_insensitive(&canonical, &protected_canonical) {
+        if paths_match_case_insensitive(&canonical, protected_canonical) {
             return Ok(true);
         }
     }
