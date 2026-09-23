@@ -47,8 +47,11 @@ impl Scanner for NodeCacheScanner {
         matches!(cat, "node-cache" | "npm-cache" | "yarn-cache" | "bun-cache")
     }
 
+    /// The caches are plain download directories, so they are measured and removed
+    /// directly. This does not depend on npm/yarn/bun being on the app's PATH (GUI apps
+    /// get a minimal PATH, and bun lives in ~/.bun/bin).
     async fn is_available(&self) -> bool {
-        scanner::tool_installed("npm").await
+        true
     }
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
@@ -57,14 +60,15 @@ impl Scanner for NodeCacheScanner {
 
         let caches = [
             (
-                ".npm",
+                // What `npm cache clean --force` removes; the rest of ~/.npm is left alone.
+                ".npm/_cacache",
                 "npm-cache",
                 "npm cache",
                 "npm download cache — safe to remove",
                 "npm install will re-download as needed",
             ),
             (
-                "Library/Caches/yarn",
+                "Library/Caches/Yarn",
                 "yarn-cache",
                 "Yarn cache",
                 "Yarn download cache — safe to remove",
@@ -101,40 +105,8 @@ impl Scanner for NodeCacheScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
-        let mut results = Vec::new();
-        for item in items {
-            let output = match item.category.as_str() {
-                "npm-cache" => {
-                    Command::new("npm")
-                        .args(["cache", "clean", "--force"])
-                        .output()
-                        .await?
-                }
-                "yarn-cache" => {
-                    Command::new("yarn")
-                        .args(["cache", "clean"])
-                        .output()
-                        .await?
-                }
-                "bun-cache" => {
-                    Command::new("bun")
-                        .args(["pm", "cache", "rm"])
-                        .output()
-                        .await?
-                }
-                _ => {
-                    results.push(scanner::error_result(
-                        item,
-                        format!("Unknown node cache category: {}", item.category),
-                    ));
-                    continue;
-                }
-            };
-
-            results.push(scanner::command_to_clean_result(item, &output));
-        }
-        Ok(results)
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
+        scanner::clean_filesystem_items(items).await
     }
 }
 
@@ -295,7 +267,7 @@ impl Scanner for NodeModulesScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         scanner::clean_filesystem_items(items).await
     }
 }

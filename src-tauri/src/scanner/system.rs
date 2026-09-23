@@ -69,7 +69,7 @@ impl Scanner for SystemCacheScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         scanner::clean_filesystem_items(items).await
     }
 }
@@ -138,7 +138,7 @@ impl Scanner for AppSupportScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         scanner::clean_filesystem_items(items).await
     }
 }
@@ -184,44 +184,45 @@ impl Scanner for LogsScanner {
         }
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         // LogsScanner removes contents but keeps the directory
         let mut results = Vec::new();
         for item in items {
             let path = std::path::Path::new(&item.path);
             if !path.exists() {
-                results.push(scanner::success_result(item));
+                results.push(CleanResult {
+                    freed_bytes: 0,
+                    ..scanner::success_result(item)
+                });
                 continue;
             }
             if let Err(e) = crate::safety::protected_paths::validate_before_delete(path) {
                 results.push(scanner::error_result(item, e.to_string()));
                 continue;
             }
-            let mut ok = true;
+            let mut failures = 0;
             if let Ok(entries) = std::fs::read_dir(path) {
                 for entry in entries.filter_map(|e| e.ok()) {
                     let ep = entry.path();
-                    let result = if ep.is_dir() {
+                    let removed = if ep.is_dir() {
                         tokio::fs::remove_dir_all(&ep).await
                     } else {
                         tokio::fs::remove_file(&ep).await
                     };
-                    if result.is_err() {
-                        ok = false;
+                    if removed.is_err() {
+                        failures += 1;
                     }
                 }
             }
-            results.push(CleanResult {
-                id: item.id.clone(),
-                freed_bytes: if ok { item.size_bytes } else { 0 },
-                success: ok,
-                error: if ok {
-                    None
-                } else {
-                    Some("Some log files could not be removed".to_string())
-                },
+            results.push(if failures == 0 {
+                scanner::success_result(item)
+            } else {
+                scanner::error_result(
+                    item,
+                    format!("{failures} log entries could not be removed (in use or protected)"),
+                )
             });
         }
-        Ok(results)
+        results
     }
 }

@@ -1,22 +1,17 @@
 pub mod activity;
+mod cleanup;
 mod commands;
 mod models;
 mod safety;
 mod scanner;
+mod state;
 mod tray;
 
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use tauri::Manager;
 
 use commands::{
-    cancel_scan, clean_items, get_activity_log, get_audit_log, get_disk_info, run_preflight,
-    scan_all,
+    cancel_scan, clean_items, get_activity_log, get_audit_log, get_disk_info, scan_all,
 };
-
-pub struct ScanState {
-    pub cancelled: Arc<AtomicBool>,
-}
 
 /// Extend PATH so child processes (docker, brew, npm, etc.) can be found.
 ///
@@ -74,6 +69,8 @@ fn extend_path() {
     }
 
     let joined = final_paths.join(":");
+    // SAFETY: called first thing in `run()`, before Tauri or Tokio spawn any thread,
+    // so no other thread can be reading the environment concurrently.
     unsafe {
         std::env::set_var("PATH", &joined);
     }
@@ -86,9 +83,7 @@ pub fn run() {
     extend_path();
 
     tauri::Builder::default()
-        .manage(ScanState {
-            cancelled: Arc::new(AtomicBool::new(false)),
-        })
+        .manage(state::ScanState::default())
         .invoke_handler(tauri::generate_handler![
             scan_all,
             cancel_scan,
@@ -96,7 +91,6 @@ pub fn run() {
             get_disk_info,
             get_audit_log,
             get_activity_log,
-            run_preflight,
         ])
         .setup(|app| {
             let logger = activity::ActivityLogger::new(app.handle().clone())

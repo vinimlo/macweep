@@ -1,73 +1,16 @@
-use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
 use crate::scanner;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PreflightResult {
-    pub docker_running: bool,
-    pub docker_containers_active: bool,
-    pub disk_free_percent: f64,
-    pub available_tools: Vec<String>,
-}
-
-pub async fn run_preflight() -> anyhow::Result<PreflightResult> {
-    // Run all checks in parallel
-    let (docker_result, disk_free, available_tools) =
-        tokio::join!(check_docker(), check_disk_free(), detect_tools());
-
-    let (docker_running, docker_containers_active) = docker_result;
-
-    Ok(PreflightResult {
-        docker_running,
-        docker_containers_active,
-        disk_free_percent: disk_free.unwrap_or(0.0),
-        available_tools,
-    })
-}
-
-async fn check_docker() -> (bool, bool) {
-    let info = Command::new("docker").arg("info").output().await;
-    let running = info.map(|o| o.status.success()).unwrap_or(false);
-
-    if !running {
-        return (false, false);
+/// Whether any Docker container is running. Docker images and volumes are only
+/// removed when this is `Ok(false)`; an error (e.g. the daemon is down) also blocks them.
+pub async fn docker_containers_running() -> anyhow::Result<bool> {
+    let output = scanner::run_with_timeout(Command::new("docker").args(["ps", "-q"]), 15).await?;
+    if !output.status.success() {
+        anyhow::bail!(
+            "Docker is not reachable: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
-
-    let ps = Command::new("docker").args(["ps", "-q"]).output().await;
-    let containers_active = ps
-        .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty())
-        .unwrap_or(false);
-
-    (true, containers_active)
-}
-
-async fn check_disk_free() -> anyhow::Result<f64> {
-    let info = crate::commands::get_disk_info_internal().await?;
-    Ok(info.free_percent)
-}
-
-async fn detect_tools() -> Vec<String> {
-    let tools = [
-        ("docker", "docker"),
-        ("npm", "npm"),
-        ("yarn", "yarn"),
-        ("bun", "bun"),
-        ("brew", "brew"),
-        ("pip", "pip3"),
-        ("ollama", "ollama"),
-    ];
-
-    let checks: Vec<_> = tools
-        .iter()
-        .map(|(_, cmd)| scanner::tool_installed(cmd))
-        .collect();
-    let results = futures::future::join_all(checks).await;
-
-    tools
-        .iter()
-        .zip(results)
-        .filter(|(_, available)| *available)
-        .map(|((name, _), _)| name.to_string())
-        .collect()
+    Ok(!String::from_utf8_lossy(&output.stdout).trim().is_empty())
 }

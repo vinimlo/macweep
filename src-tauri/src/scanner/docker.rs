@@ -11,6 +11,7 @@ use crate::scanner::{self, Scanner};
 fn is_valid_docker_id(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 512
+        && !s.starts_with('-')
         && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || "._:/-".contains(c))
 }
@@ -19,6 +20,7 @@ fn is_valid_docker_id(s: &str) -> bool {
 fn is_valid_volume_name(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 256
+        && !s.starts_with('-')
         && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
 }
@@ -35,25 +37,84 @@ async fn docker_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Shared clean implementation for Docker volume scanners.
-async fn clean_docker_volumes(items: &[ScanResult]) -> Result<Vec<CleanResult>> {
-    let mut results = Vec::new();
-    for item in items {
-        if !is_valid_volume_name(&item.path) {
-            results.push(scanner::error_result(
-                item,
-                "Invalid Docker volume name".to_string(),
-            ));
-            continue;
-        }
-        let output = scanner::run_with_timeout(
-            Command::new("docker").args(["volume", "rm", &item.path]),
-            30,
-        )
-        .await?;
-        results.push(scanner::command_to_clean_result(item, &output));
+struct Container {
+    id: String,
+    name: String,
+    running: bool,
+}
+
+/// Containers (running or stopped) that mount the given volume.
+async fn containers_using(volume: &str) -> Result<Vec<Container>> {
+    let output = scanner::run_with_timeout(
+        Command::new("docker").args([
+            "ps",
+            "-a",
+            "--filter",
+            &format!("volume={volume}"),
+            "--format",
+            "{{.ID}}\t{{.Names}}\t{{.State}}",
+        ]),
+        15,
+    )
+    .await?;
+    if !output.status.success() {
+        anyhow::bail!("{}", String::from_utf8_lossy(&output.stderr).trim());
     }
-    Ok(results)
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('\t');
+            let id = parts.next()?.trim();
+            let name = parts.next()?.trim();
+            let state = parts.next().unwrap_or("").trim();
+            is_valid_docker_id(id).then(|| Container {
+                id: id.to_string(),
+                name: name.to_string(),
+                running: state == "running",
+            })
+        })
+        .collect())
+}
+
+fn container_names(containers: &[Container]) -> String {
+    containers
+        .iter()
+        .map(|c| c.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Remove a volume. Docker refuses to remove a volume that any container still references,
+/// even a stopped one, so the stopped containers using it are removed first (the scan
+/// discloses them in the item's warning). Running containers are never touched.
+async fn remove_volume(item: &ScanResult) -> CleanResult {
+    if !is_valid_volume_name(&item.path) {
+        return scanner::error_result(item, "Invalid Docker volume name".to_string());
+    }
+    let containers = match containers_using(&item.path).await {
+        Ok(c) => c,
+        Err(e) => return scanner::error_result(item, format!("Could not inspect volume: {e}")),
+    };
+    if containers.iter().any(|c| c.running) {
+        return scanner::error_result(
+            item,
+            format!(
+                "Volume is in use by a running container ({}) — stop it first",
+                container_names(&containers)
+            ),
+        );
+    }
+    if !containers.is_empty() {
+        let mut rm = Command::new("docker");
+        rm.arg("rm").args(containers.iter().map(|c| c.id.as_str()));
+        let removed = scanner::clean_with_command(item, &mut rm, 60).await;
+        if !removed.success {
+            return removed;
+        }
+    }
+    let mut cmd = Command::new("docker");
+    cmd.args(["volume", "rm", &item.path]);
+    scanner::clean_with_command(item, &mut cmd, 60).await
 }
 
 #[async_trait]
@@ -109,18 +170,27 @@ impl Scanner for DockerBuildCacheScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         let mut results = Vec::new();
         for item in items {
-            let output = scanner::run_with_timeout(
-                Command::new("docker").args(["builder", "prune", "-a", "-f"]),
-                30,
-            )
-            .await?;
-
-            results.push(scanner::command_to_clean_result(item, &output));
+            let mut cmd = Command::new("docker");
+            cmd.args(["builder", "prune", "-a", "-f"]);
+            // Large caches take minutes to prune; 30s used to report a failure while
+            // Docker went on to free the space anyway.
+            let mut result = scanner::clean_with_command(item, &mut cmd, 600).await;
+            if result
+                .error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Command timed out"))
+            {
+                result.error = Some(
+                    "Timed out after 10 minutes. Docker may still be pruning — run a new scan to check."
+                        .to_string(),
+                );
+            }
+            results.push(result);
         }
-        Ok(results)
+        results
     }
 }
 
@@ -150,33 +220,26 @@ impl Scanner for DockerImagesScanner {
         .await?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let mut items = Vec::new();
-
-        for line in stdout.lines() {
-            let parts: Vec<&str> = line.split('\t').collect();
-            if parts.len() >= 3 {
-                let name = parts[0];
-                let id = parts[1];
-                let size_bytes = parse_docker_size(parts[2]);
-                if size_bytes > 0 {
-                    items.push(ScanResult {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        category: self.category().to_string(),
-                        label: format!("Image: {}", name),
-                        risk_level: self.risk_level(),
-                        path: id.to_string(),
-                        size_bytes,
-                        detail: format!("Docker image {} ({})", name, id),
-                        regeneration_hint: format!("docker pull {}", name),
-                        warning: None,
-                    });
+        Ok(group_images(&stdout)
+            .into_iter()
+            .map(|(id, names, size_bytes)| {
+                let name = names.join(", ");
+                ScanResult {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    category: self.category().to_string(),
+                    label: format!("Image: {}", name),
+                    risk_level: self.risk_level(),
+                    detail: format!("Docker image {} ({})", name, id),
+                    regeneration_hint: format!("docker pull {}", names[0]),
+                    path: id,
+                    size_bytes,
+                    warning: None,
                 }
-            }
-        }
-        Ok(items)
+            })
+            .collect())
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         let mut results = Vec::new();
         for item in items {
             if !is_valid_docker_id(&item.path) {
@@ -186,15 +249,34 @@ impl Scanner for DockerImagesScanner {
                 ));
                 continue;
             }
-            let output = scanner::run_with_timeout(
-                Command::new("docker").args(["rmi", "-f", &item.path]),
-                30,
-            )
-            .await?;
-            results.push(scanner::command_to_clean_result(item, &output));
+            let mut cmd = Command::new("docker");
+            cmd.args(["rmi", "-f", &item.path]);
+            results.push(scanner::clean_with_command(item, &mut cmd, 60).await);
         }
-        Ok(results)
+        results
     }
+}
+
+/// Group `docker images` lines by image ID. An image with several tags is listed once
+/// per tag; offering each line separately double-counted its size and made every
+/// removal after the first fail with "No such image".
+fn group_images(stdout: &str) -> Vec<(String, Vec<String>, u64)> {
+    let mut images: Vec<(String, Vec<String>, u64)> = Vec::new();
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() < 3 {
+            continue;
+        }
+        let (name, id, size) = (parts[0], parts[1], parse_docker_size(parts[2]));
+        if size == 0 {
+            continue;
+        }
+        match images.iter_mut().find(|(existing, _, _)| existing == id) {
+            Some((_, names, _)) => names.push(name.to_string()),
+            None => images.push((id.to_string(), vec![name.to_string()], size)),
+        }
+    }
+    images
 }
 
 // --- DockerOrphanVolumesScanner (Risk Low) ---
@@ -249,8 +331,12 @@ impl Scanner for DockerOrphanVolumesScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
-        clean_docker_volumes(items).await
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
+        let mut results = Vec::new();
+        for item in items {
+            results.push(remove_volume(item).await);
+        }
+        results
     }
 }
 
@@ -301,6 +387,18 @@ impl Scanner for DockerNamedVolumesScanner {
                 continue;
             }
 
+            let warning = match containers_using(name).await {
+                Ok(c) if c.iter().any(|c| c.running) => Some(format!(
+                    "In use by a running container ({}) — stop it before cleaning",
+                    container_names(&c)
+                )),
+                Ok(c) if !c.is_empty() => Some(format!(
+                    "Used by stopped container {} — removed together with the volume",
+                    container_names(&c)
+                )),
+                _ => None,
+            };
+
             items.push(ScanResult {
                 id: uuid::Uuid::new_v4().to_string(),
                 category: self.category().to_string(),
@@ -311,14 +409,18 @@ impl Scanner for DockerNamedVolumesScanner {
                 detail: "Named Docker volume — may contain database or application data"
                     .to_string(),
                 regeneration_hint: "Data will be LOST. Only remove if you're sure.".to_string(),
-                warning: None,
+                warning,
             });
         }
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
-        clean_docker_volumes(items).await
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
+        let mut results = Vec::new();
+        for item in items {
+            results.push(remove_volume(item).await);
+        }
+        results
     }
 }
 
@@ -338,4 +440,26 @@ pub fn parse_docker_size(s: &str) -> u64 {
         return 0;
     };
     scanner::parse_size_with_units(num_str, unit)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn images_with_several_tags_are_offered_once() {
+        let out = "app:latest\tabc123\t1.5GB\napp:v2\tabc123\t1.5GB\nredis:7\tdef456\t100MB\n";
+        let images = group_images(out);
+        assert_eq!(images.len(), 2);
+        assert_eq!(images[0].1, vec!["app:latest", "app:v2"]);
+        assert_eq!(images[0].2, parse_docker_size("1.5GB"));
+    }
+
+    #[test]
+    fn ids_and_names_cannot_look_like_flags() {
+        assert!(!is_valid_docker_id("--force"));
+        assert!(!is_valid_volume_name("-v"));
+        assert!(is_valid_docker_id("sha256:abc-1"));
+        assert!(is_valid_volume_name("shop_pgdata"));
+    }
 }

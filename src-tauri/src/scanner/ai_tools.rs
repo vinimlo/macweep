@@ -9,6 +9,7 @@ use crate::scanner::{self, Scanner};
 fn is_valid_ollama_model(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 256
+        && !name.starts_with('-')
         && name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || "._:-/".contains(c))
@@ -43,7 +44,7 @@ impl Scanner for AiToolsScanner {
 
         // Ollama models
         if scanner::tool_installed("ollama").await {
-            let output = Command::new("ollama").args(["list"]).output().await;
+            let output = scanner::run_with_timeout(Command::new("ollama").arg("list"), 15).await;
             if let Ok(out) = output {
                 let stdout = String::from_utf8_lossy(&out.stdout);
                 for line in stdout.lines().skip(1) {
@@ -142,9 +143,11 @@ impl Scanner for AiToolsScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
-        let (ollama_items, fs_items): (Vec<_>, Vec<_>) =
-            items.iter().partition(|i| i.category == "ollama-models");
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
+        let (ollama_items, fs_items): (Vec<ScanResult>, Vec<ScanResult>) = items
+            .iter()
+            .cloned()
+            .partition(|i| i.category == "ollama-models");
 
         let mut results = Vec::new();
 
@@ -158,14 +161,13 @@ impl Scanner for AiToolsScanner {
                 ));
                 continue;
             }
-            let output = Command::new("ollama").args(["rm", model]).output().await?;
-            results.push(scanner::command_to_clean_result(item, &output));
+            let mut cmd = Command::new("ollama");
+            cmd.args(["rm", model]);
+            results.push(scanner::clean_with_command(item, &mut cmd, 60).await);
         }
 
         // Handle filesystem items via shared helper
-        let fs_items_owned: Vec<_> = fs_items.into_iter().cloned().collect();
-        results.extend(scanner::clean_filesystem_items(&fs_items_owned).await?);
-
-        Ok(results)
+        results.extend(scanner::clean_filesystem_items(&fs_items).await);
+        results
     }
 }
