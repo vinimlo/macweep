@@ -20,7 +20,7 @@
 	const usedOffset = $derived(circumference * (1 - usedPercent / 100));
 	const recoverableOffset = $derived(circumference * (1 - recoverablePercent / 100));
 
-	const ringColor = $derived(diskColor(usedPercent, 'var(--text-muted)'));
+	const ringColor = $derived(diskColor(usedPercent, 'var(--text-secondary)'));
 </script>
 
 <div class="gauge">
@@ -70,18 +70,18 @@
 
 	<div class="gauge-stats">
 		<div class="stat-row">
-			<span class="stat-dot" style="background: var(--text-muted)"></span>
+			<span class="stat-dot used"></span>
 			<span class="stat-label">Used</span>
 			<span class="stat-value">{formatSize(info.used_bytes)}</span>
 		</div>
 		<div class="stat-row">
-			<span class="stat-dot" style="background: var(--bg-active)"></span>
+			<span class="stat-dot free"></span>
 			<span class="stat-label">Free</span>
 			<span class="stat-value">{formatSize(info.free_bytes)}</span>
 		</div>
 		{#if scanStore.totalBytes > 0}
 			<div class="stat-row recoverable">
-				<span class="stat-dot" style="background: var(--accent)"></span>
+				<span class="stat-dot sweepable"></span>
 				<span class="stat-label">Sweepable</span>
 				<span class="stat-value">{formatSize(scanStore.totalBytes)}</span>
 			</div>
@@ -99,7 +99,7 @@
 		align-items: center;
 		gap: var(--space-xl);
 		justify-content: center;
-		padding: var(--space-lg) 0;
+		padding: var(--space-base) 0;
 		animation: fadeIn var(--duration-slow) var(--ease-out);
 	}
 
@@ -109,12 +109,13 @@
 	}
 
 	.used-arc {
-		transition: stroke-dashoffset 0.8s var(--ease-out), stroke 0.4s;
+		transition:
+			stroke-dashoffset 0.8s var(--ease-out),
+			stroke 0.4s;
 	}
 
 	.recoverable-arc {
 		transition: stroke-dashoffset 0.8s var(--ease-out);
-		filter: drop-shadow(0 0 6px var(--accent-glow-strong));
 	}
 
 	.gauge-center {
@@ -127,28 +128,25 @@
 	}
 
 	.gauge-value {
-		font-size: 32px;
-		font-weight: 200;
-		letter-spacing: -0.03em;
+		font-size: 30px;
+		font-weight: 300;
+		letter-spacing: -0.02em;
 		line-height: 1;
 		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.gauge-label {
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+		font-size: var(--text-xs);
+		font-weight: 500;
 		color: var(--text-muted);
-		margin-top: 2px;
+		margin-top: 4px;
 	}
 
 	.gauge-stats {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-sm);
-		min-width: 150px;
+		min-width: 160px;
 	}
 
 	.stat-row {
@@ -165,44 +163,52 @@
 	}
 
 	.stat-dot {
-		width: 6px;
-		height: 6px;
+		width: 7px;
+		height: 7px;
 		border-radius: 50%;
 		flex-shrink: 0;
 	}
 
+	.stat-dot.used {
+		background: var(--text-secondary);
+	}
+
+	.stat-dot.free {
+		background: var(--bg-active);
+	}
+
+	.stat-dot.sweepable {
+		background: var(--accent);
+	}
+
 	.stat-label {
 		flex: 1;
-		font-size: 11px;
+		font-size: var(--text-sm);
 		color: var(--text-secondary);
 	}
 
 	.stat-value {
-		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: var(--text-sm);
 		font-weight: 600;
 		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.stat-total {
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
-		padding-left: 14px;
+		padding-left: 15px;
 	}
 
 	.stat-total .stat-label {
 		flex: 1;
 		color: var(--text-muted);
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
+		font-size: var(--text-xs);
 	}
 
 	.stat-total .stat-value {
-		font-size: 10px;
+		font-size: var(--text-xs);
+		font-weight: 500;
 		color: var(--text-secondary);
 	}
 </style>

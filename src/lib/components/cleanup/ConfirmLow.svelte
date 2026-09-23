@@ -25,103 +25,98 @@
 	const selectedBytes = $derived(selectedItems.reduce((s, i) => s + i.size_bytes, 0));
 </script>
 
-<div class="confirm">
-	<div class="header">
-		<div class="icon-wrap low">
+<div class="confirm-step">
+	<div class="confirm-header">
+		<div class="confirm-icon low">
 			<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-				<circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
-				<path d="M7 4.5v3M7 9.5v0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+				<path d="M11.5 5A4.5 4.5 0 102.9 9.2M11.5 5V2M11.5 5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 			</svg>
 		</div>
 		<div>
-			<h3>Regenerable Items</h3>
-			<p class="subtitle">Can be restored with a command (e.g. <code>npm install</code>)</p>
+			<h3 class="confirm-title">Regenerable Items</h3>
+			<p class="confirm-subtitle">Restored with a command such as <code>npm install</code> or <code>docker pull</code>.</p>
 		</div>
 	</div>
 
 	<div class="toolbar">
-		<button class="link" onclick={selectAll}>All</button>
-		<span class="sep">/</span>
-		<button class="link" onclick={selectNone}>None</button>
-		<span class="selected-info">
-			{selected.size} selected &middot; {formatSize(selectedBytes)}
-		</span>
+		<button class="link" onclick={selectAll}>Select All</button>
+		<button class="link" onclick={selectNone}>Select None</button>
+		<span class="selected-info">{selected.size} selected, {formatSize(selectedBytes)}</span>
 	</div>
 
 	<div class="items">
-		{#each items as item, i (item.id)}
-			<label class="item" class:checked={selected.has(item.id)} style="animation-delay: {i * 15}ms">
-				<input type="checkbox" checked={selected.has(item.id)} onchange={() => toggle(item.id)} />
-				<span class="item-label">{item.label}</span>
+		{#each items as item (item.id)}
+			<label class="item">
+				<input
+					type="checkbox"
+					checked={selected.has(item.id)}
+					onchange={() => toggle(item.id)}
+				/>
+				<span class="item-main">
+					<span class="item-label">{item.label}</span>
+					<span class="confirm-path path selectable" title={item.path}>{item.path}</span>
+				</span>
 				{#if item.warning}
-					<span class="item-warning">{item.warning}</span>
+					<span class="confirm-warning">{item.warning}</span>
 				{/if}
-				<span class="item-path">{item.path}</span>
-				<span class="item-size">{formatSize(item.size_bytes)}</span>
+				<span class="confirm-size">{formatSize(item.size_bytes)}</span>
 			</label>
 		{/each}
 	</div>
 
-	{#if items[0]?.regeneration_hint}
-		<p class="hint">{items[0].regeneration_hint}</p>
-	{/if}
-
-	<div class="actions">
-		<button class="btn btn-skip" onclick={onskip}>Skip</button>
-		<button class="btn btn-confirm" disabled={selected.size === 0} onclick={() => onconfirm(selectedItems)}>
-			Clean {selected.size} Items
+	<div class="confirm-actions">
+		<button class="btn btn-secondary" onclick={onskip}>Skip</button>
+		<button
+			class="btn btn-solid confirm"
+			disabled={selected.size === 0}
+			onclick={() => onconfirm(selectedItems)}
+		>
+			Clean {selected.size} Item{selected.size !== 1 ? 's' : ''}
 		</button>
 	</div>
 </div>
 
 <style>
-	@import './confirm-shared.css';
-
-	.icon-wrap.low {
-		background: var(--risk-low-dim);
-		color: var(--risk-low);
+	.low {
+		--tone: var(--risk-low);
 	}
 
 	code {
 		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: var(--text-xs);
 		background: var(--bg-overlay);
-		padding: 1px 4px;
-		border-radius: 3px;
+		padding: 1px 5px;
+		border-radius: 4px;
 	}
 
 	.toolbar {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		font-size: 11px;
+		gap: var(--space-md);
+		font-size: var(--text-sm);
 	}
 
 	.link {
 		color: var(--accent);
-		font-size: 11px;
 		font-weight: 500;
+		border-radius: var(--radius-sm);
 	}
 
-	.link:hover { text-decoration: underline; }
-
-	.sep { color: var(--text-muted); }
+	.link:hover {
+		color: var(--accent-hover);
+	}
 
 	.selected-info {
 		color: var(--text-muted);
 		margin-left: auto;
-		font-family: var(--font-mono);
-		font-size: 10px;
-		font-variant-numeric: tabular-nums;
 	}
 
 	.items {
 		display: flex;
 		flex-direction: column;
-		gap: 1px;
-		background: var(--bg-base);
+		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-md);
-		overflow: hidden;
+		background: var(--bg-raised);
 		max-height: 260px;
 		overflow-y: auto;
 	}
@@ -129,61 +124,47 @@
 	.item {
 		display: flex;
 		align-items: center;
-		gap: var(--space-sm);
+		gap: var(--space-md);
 		padding: var(--space-sm) var(--space-md);
-		font-size: 12px;
+		font-size: var(--text-sm);
 		cursor: pointer;
-		background: var(--bg-raised);
-		transition: background var(--duration-fast);
-		animation: fadeIn var(--duration-base) var(--ease-out) both;
+		transition: background-color var(--duration-fast) var(--ease-out);
 	}
 
-	.item:hover { background: var(--bg-surface); }
+	.item + .item {
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.item:hover {
+		background: var(--bg-surface);
+	}
 
 	.item input {
-		accent-color: var(--accent);
-		flex-shrink: 0;
+		--check-color: var(--risk-low);
+	}
+
+	.item-main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.item-label {
 		font-weight: 500;
-		white-space: nowrap;
 		color: var(--text-primary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.item-path {
-		flex: 1;
-		color: var(--text-muted);
-		font-family: var(--font-mono);
-		font-size: 10px;
+	.path {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		direction: rtl;
-		text-align: left;
 	}
 
-	.item-warning {
-		font-size: 9px;
-		color: var(--risk-medium, #e6a700);
-		font-weight: 500;
-		white-space: nowrap;
+	.confirm {
+		--tint: var(--risk-low);
 	}
-
-	.item-size { white-space: nowrap; }
-
-	.hint {
-		font-size: 11px;
-		color: var(--text-muted);
-		font-style: italic;
-		padding-left: var(--space-sm);
-		border-left: 2px solid var(--border-default);
-	}
-
-	.btn-confirm {
-		background: var(--risk-low);
-		color: var(--text-inverse);
-	}
-
-	.btn-confirm:hover:not(:disabled) { opacity: 0.9; }
 </style>

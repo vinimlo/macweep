@@ -14,12 +14,12 @@
 <style>
 	.container {
 		position: fixed;
-		bottom: var(--space-lg);
-		right: var(--space-lg);
+		bottom: 44px;
+		right: var(--space-base);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-sm);
-		z-index: 200;
 		max-width: 340px;
+		z-index: 950;
 	}
 </style>

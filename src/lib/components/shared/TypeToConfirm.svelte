@@ -7,7 +7,7 @@
 
 <div class="type-confirm">
 	<p class="instruction">
-		Type <code>{target}</code> to confirm deletion
+		Type <code class="target">{target}</code> to confirm
 	</p>
 	<div class="input-row">
 		<input
@@ -16,10 +16,11 @@
 			placeholder={target}
 			class="input"
 			class:valid={matches}
+			aria-label="Type {target} to confirm"
 			spellcheck="false"
 			autocomplete="off"
 		/>
-		<button class="btn-confirm" disabled={!matches} onclick={onconfirm}>
+		<button class="btn btn-danger" disabled={!matches} onclick={onconfirm}>
 			Confirm
 		</button>
 	</div>
@@ -33,17 +34,17 @@
 	}
 
 	.instruction {
-		font-size: 11px;
+		font-size: var(--text-sm);
 		color: var(--text-secondary);
 	}
 
-	code {
+	.target {
 		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: var(--text-xs);
 		background: var(--bg-overlay);
 		padding: 1px 5px;
-		border-radius: 3px;
-		color: var(--risk-high);
+		border-radius: 4px;
+		color: var(--text-primary);
 		font-weight: 600;
 	}
 
@@ -54,38 +55,31 @@
 
 	.input {
 		flex: 1;
-		padding: 6px var(--space-md);
+		height: 30px;
+		padding: 0 var(--space-md);
 		background: var(--bg-base);
 		border: 1px solid var(--border-default);
-		border-radius: var(--radius-sm);
+		border-radius: var(--radius-md);
 		color: var(--text-primary);
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: var(--text-sm);
 		outline: none;
-		transition: border-color var(--duration-fast);
+		transition:
+			border-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-fast) var(--ease-out);
+	}
+
+	.input::placeholder {
+		color: var(--text-muted);
+		opacity: 0.6;
 	}
 
 	.input:focus {
-		border-color: var(--border-hover);
+		border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+		box-shadow: 0 0 0 3px var(--accent-glow);
 	}
 
 	.input.valid {
-		border-color: var(--risk-zero);
-	}
-
-	.btn-confirm {
-		padding: 6px var(--space-base);
-		background: var(--risk-high);
-		color: white;
-		border-radius: var(--radius-sm);
-		font-weight: 600;
-		font-size: 11px;
-		letter-spacing: 0.02em;
-		transition: opacity var(--duration-fast);
-		white-space: nowrap;
-	}
-
-	.btn-confirm:hover:not(:disabled) {
-		opacity: 0.9;
+		border-color: color-mix(in srgb, var(--risk-high) 60%, transparent);
 	}
 </style>

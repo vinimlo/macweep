@@ -11,31 +11,31 @@
 	const totalBytes = $derived(items.reduce((s, i) => s + i.size_bytes, 0));
 </script>
 
-<div class="confirm">
-	<div class="header">
-		<div class="icon-wrap safe">
+<div class="confirm-step">
+	<div class="confirm-header">
+		<div class="confirm-icon safe">
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
 				<path d="M3 8l4 4 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 			</svg>
 		</div>
 		<div>
-			<h3>Safe to Clean</h3>
-			<p class="subtitle">100% regenerable caches &mdash; <strong>{formatSize(totalBytes)}</strong></p>
+			<h3 class="confirm-title">Safe to Clean</h3>
+			<p class="confirm-subtitle">Caches that tools recreate on their own when needed.</p>
 		</div>
 	</div>
 
 	<div class="items">
-		{#each items as item, i (item.id)}
-			<div class="item" style="animation-delay: {i * 20}ms">
+		{#each items as item (item.id)}
+			<div class="item">
 				<span class="item-label">{item.label}</span>
-				<span class="item-size">{formatSize(item.size_bytes)}</span>
+				<span class="confirm-size">{formatSize(item.size_bytes)}</span>
 			</div>
 		{/each}
 	</div>
 
-	<div class="actions">
-		<button class="btn btn-skip" onclick={onskip}>Skip</button>
-		<button class="btn btn-confirm" onclick={onconfirm}>
+	<div class="confirm-actions">
+		<button class="btn btn-secondary" onclick={onskip}>Skip</button>
+		<button class="btn btn-solid confirm" onclick={onconfirm}>
 			Clean All
 			<span class="btn-size">{formatSize(totalBytes)}</span>
 		</button>
@@ -43,60 +43,43 @@
 </div>
 
 <style>
-	@import './confirm-shared.css';
-
-	.confirm { gap: var(--space-lg); }
-
-	.icon-wrap.safe {
-		background: var(--risk-zero-dim);
-		color: var(--risk-zero);
-	}
-
-	.subtitle strong {
-		font-family: var(--font-mono);
-		color: var(--text-primary);
+	.safe {
+		--tone: var(--risk-zero);
 	}
 
 	.items {
 		display: flex;
 		flex-direction: column;
-		gap: 1px;
-		background: var(--bg-base);
+		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-md);
-		overflow: hidden;
-		max-height: 220px;
+		background: var(--bg-raised);
 		overflow-y: auto;
+		max-height: 240px;
 	}
 
 	.item {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: var(--space-md);
 		padding: var(--space-sm) var(--space-md);
-		background: var(--bg-raised);
-		font-size: 12px;
-		animation: fadeIn var(--duration-base) var(--ease-out) both;
+		font-size: var(--text-sm);
+	}
+
+	.item + .item {
+		border-top: 1px solid var(--border-subtle);
 	}
 
 	.item-label {
 		color: var(--text-primary);
 	}
 
-	.btn-confirm {
-		background: var(--risk-zero);
-		color: var(--text-inverse);
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.btn-confirm:hover {
-		opacity: 0.9;
+	.confirm {
+		--tint: var(--risk-zero);
 	}
 
 	.btn-size {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		opacity: 0.7;
+		font-weight: 500;
+		opacity: 0.75;
 	}
 </style>

@@ -34,9 +34,9 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-md);
-		padding: var(--space-base) 0;
-		animation: slideUp var(--duration-slow) var(--ease-out);
+		gap: var(--space-sm);
+		padding: var(--space-sm) 0;
+		animation: fadeIn var(--duration-slow) var(--ease-out);
 	}
 
 	.hero {
@@ -45,21 +45,19 @@
 		gap: var(--space-sm);
 	}
 
+	/* The one bold moment of the dashboard: how much can be swept. */
 	.hero-value {
-		font-size: 36px;
-		font-weight: 200;
+		font-size: var(--text-display);
+		font-weight: 300;
 		letter-spacing: -0.03em;
 		line-height: 1;
 		color: var(--accent);
-		font-family: var(--font-mono);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.hero-label {
-		font-size: 12px;
+		font-size: var(--text-base);
 		font-weight: 500;
 		color: var(--text-secondary);
-		letter-spacing: 0.02em;
 	}
 
 	.metrics {
@@ -75,23 +73,19 @@
 	}
 
 	.metric-value {
-		font-family: var(--font-mono);
-		font-size: 13px;
+		font-size: var(--text-sm);
 		font-weight: 600;
 		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.metric-label {
-		font-size: 10px;
+		font-size: var(--text-sm);
 		color: var(--text-muted);
-		letter-spacing: 0.02em;
 	}
 
 	.metric-sep {
-		width: 3px;
-		height: 3px;
-		border-radius: 50%;
-		background: var(--bg-active);
+		width: 1px;
+		height: 10px;
+		background: var(--border-default);
 	}
 </style>

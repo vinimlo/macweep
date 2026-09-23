@@ -34,17 +34,16 @@
 	</div>
 {:else}
 	<div class="list-header">
-		<span class="list-title">Categories</span>
+		<h2 class="list-title">Categories</h2>
 		<span class="list-count">{scanStore.categories.length}</span>
 	</div>
 	<div class="list">
-		{#each scanStore.categories as group, i (group.category)}
+		{#each scanStore.categories as group (group.category)}
 			<CategoryCard
 				category={group.category}
 				items={group.items}
 				totalBytes={group.totalBytes}
 				{maxBytes}
-				index={i}
 				onclick={() => goto(`/category/${encodeURIComponent(group.category)}`)}
 			/>
 		{/each}
@@ -56,31 +55,26 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
-		margin-bottom: var(--space-md);
+		margin-bottom: var(--space-sm);
+		padding: 0 var(--space-2xs);
 	}
 
 	.list-title {
 		font-weight: 600;
-		font-size: 10px;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--text-muted);
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
 	}
 
 	.list-count {
-		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: var(--text-xs);
+		font-weight: 500;
 		color: var(--text-muted);
-		background: var(--bg-overlay);
-		padding: 1px 5px;
-		border-radius: var(--radius-sm);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-sm);
+		gap: 6px;
 	}
 
 	.empty {
@@ -95,19 +89,19 @@
 	}
 
 	.empty-icon {
-		margin-bottom: var(--space-base);
-		opacity: 0.6;
+		margin-bottom: var(--space-md);
+		opacity: 0.7;
 	}
 
 	.empty-title {
-		font-size: 14px;
+		font-size: var(--text-lg);
 		font-weight: 600;
-		color: var(--text-secondary);
-		margin-bottom: var(--space-xs);
+		color: var(--text-primary);
+		margin-bottom: var(--space-2xs);
 	}
 
 	.empty-detail {
-		font-size: 12px;
+		font-size: var(--text-sm);
 		color: var(--text-muted);
 	}
 </style>
