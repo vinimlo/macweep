@@ -29,7 +29,8 @@ macweep runs locally on macOS with user-level permissions. Security concerns inc
 
 - All shell commands use `tokio::process::Command` with `.arg()` — no string interpolation
 - Protected paths are enforced with `canonicalize()` + component-level matching + symlink detection
-- Zero `unsafe` Rust code
+- The webview never sends paths: cleanup requests carry item IDs, and the backend only deletes items its own last scan found (each at most once)
+- One `unsafe` block: `std::env::set_var` extends `PATH` at startup, before any thread is spawned (required by Rust 2024)
 - No network access — the app is fully offline
 - Audit trail logged to `~/.storage-cleanup/audit.jsonl` with mode `0o600`
 - CSP: `default-src 'self'` — no inline scripts, no eval, no external resources

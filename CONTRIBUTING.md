@@ -55,7 +55,8 @@ macweep deletes files, so safety is critical:
 
 - **Never** add cleanup of protected paths (Documents, Desktop, SSH keys, keychains, etc.)
 - **Never** use shell string concatenation for commands — always use `.arg()`
-- **Never** use `unsafe` Rust
+- **Never** add `unsafe` Rust (the single documented exception is the `PATH` setup in `lib.rs`)
+- **Never** let the frontend decide what gets deleted — `clean_items` takes IDs from the backend's own scan
 - **Always** validate paths with `canonicalize()` before deletion
 - **Always** check for running Docker containers before removing volumes/images
 
