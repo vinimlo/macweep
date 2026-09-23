@@ -58,11 +58,7 @@ export interface DiskInfo {
 }
 
 export type ActivityLevel =
-  | "Info"
-  | "Command"
-  | "Success"
-  | "Warning"
-  | "Error";
+  "Info" | "Command" | "Success" | "Warning" | "Error";
 
 export interface ActivityEntry {
   timestamp: string;

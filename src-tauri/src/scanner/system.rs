@@ -116,7 +116,7 @@ impl Scanner for AppSupportScanner {
                 sized.push((name, path, size));
             }
         }
-        sized.sort_by(|a, b| b.2.cmp(&a.2));
+        sized.sort_by_key(|entry| std::cmp::Reverse(entry.2));
 
         for (name, path, size) in sized.into_iter().take(10) {
             items.push(ScanResult {
