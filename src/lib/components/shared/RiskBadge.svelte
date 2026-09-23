@@ -15,14 +15,13 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		padding: 2px 8px 2px 6px;
+		padding: 1px 8px 1px 7px;
 		border-radius: var(--radius-round);
-		font-size: 10px;
+		font-size: var(--text-xs);
 		font-weight: 600;
-		letter-spacing: 0.03em;
-		text-transform: uppercase;
+		white-space: nowrap;
 		color: var(--badge-color);
-		background: color-mix(in srgb, var(--badge-color) 10%, transparent);
+		background: color-mix(in srgb, var(--badge-color) 12%, transparent);
 	}
 
 	.dot {

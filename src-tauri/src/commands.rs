@@ -1,19 +1,23 @@
-use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use tauri::State;
 use tauri::ipc::Channel;
 use tokio::process::Command;
 
-use crate::ScanState;
 use crate::activity::ActivityLogger;
+use crate::cleanup;
 use crate::models::*;
 use crate::safety::{audit, preflight};
 use crate::scanner;
+use crate::state::ScanState;
+
+/// Upper bound for list-style requests coming from the webview.
+const MAX_REQUEST_ITEMS: usize = 10_000;
+const MAX_LOG_ENTRIES: usize = 1_000;
 
 #[tauri::command]
 pub async fn cancel_scan(state: State<'_, ScanState>) -> Result<(), String> {
-    state.cancelled.store(true, Ordering::SeqCst);
+    state.cancel();
     Ok(())
 }
 
@@ -23,8 +27,7 @@ pub async fn scan_all(
     state: State<'_, ScanState>,
     logger: State<'_, ActivityLogger>,
 ) -> Result<ScanReport, String> {
-    state.cancelled.store(false, Ordering::SeqCst);
-
+    let generation = state.begin_scan();
     let start = Instant::now();
     let registry = scanner::build_registry();
 
@@ -40,11 +43,6 @@ pub async fn scan_all(
         .collect();
 
     let total_scanners = available_scanners.len();
-    let available_tools: Vec<String> = available_scanners
-        .iter()
-        .map(|s| s.category().to_string())
-        .collect();
-
     logger.info(
         None,
         &format!("Scan started ({} scanners available)", total_scanners),
@@ -58,26 +56,11 @@ pub async fn scan_all(
     let mut completed_count: usize = 0;
 
     for scanner in &available_scanners {
-        // Check cancellation before starting next scanner
-        if state.cancelled.load(Ordering::SeqCst) {
-            logger.warning(None, "Scan cancelled by user", None);
-            channel
-                .send(ScanProgress::Cancelled {
-                    completed_scanners: completed_count,
-                    total_scanners,
-                })
-                .map_err(|e| e.to_string())?;
-
-            let total_bytes = all_items.iter().map(|i: &ScanResult| i.size_bytes).sum();
-            let disk_info = disk_info_or_default().await;
-
-            return Ok(ScanReport {
-                items: all_items,
-                total_bytes,
-                scan_duration_ms: start.elapsed().as_millis() as u64,
-                available_tools,
-                disk_free_percent: disk_info.free_percent,
-            });
+        // A newer scan or a cancel supersedes this one: stop here instead of
+        // running on in parallel.
+        if !state.is_current(generation) {
+            logger.warning(None, "Scan cancelled", None);
+            return Err("Scan cancelled".to_string());
         }
 
         let category = scanner.category().to_string();
@@ -121,11 +104,16 @@ pub async fn scan_all(
                 channel
                     .send(ScanProgress::ScannerFailed {
                         category,
-                        error: e.to_string(),
+                        error: err_msg,
                     })
                     .map_err(|e| e.to_string())?;
             }
         }
+    }
+
+    if !state.finish_scan(generation, &all_items) {
+        logger.warning(None, "Scan cancelled", None);
+        return Err("Scan cancelled".to_string());
     }
 
     let total_elapsed = start.elapsed().as_millis() as u64;
@@ -146,14 +134,10 @@ pub async fn scan_all(
         .send(ScanProgress::Completed)
         .map_err(|e| e.to_string())?;
 
-    let disk_info = disk_info_or_default().await;
-
     Ok(ScanReport {
         items: all_items,
         total_bytes,
         scan_duration_ms: total_elapsed,
-        available_tools,
-        disk_free_percent: disk_info.free_percent,
     })
 }
 
@@ -163,144 +147,149 @@ const DOCKER_CATEGORIES: &[&str] = &[
     "docker-volumes-named",
 ];
 
+/// Clean items found by the last scan. The webview only sends IDs: what gets deleted is
+/// always what the backend itself found, never a path supplied by the UI.
 #[tauri::command]
 pub async fn clean_items(
-    items: Vec<ScanResult>,
+    ids: Vec<String>,
     channel: Channel<CleanProgress>,
+    state: State<'_, ScanState>,
     logger: State<'_, ActivityLogger>,
-) -> Result<Vec<CleanResult>, String> {
-    // Input bounds validation
-    if items.len() > 10_000 {
-        return Err("Too many items: maximum 10,000 per request".to_string());
+) -> Result<CleanReport, String> {
+    if ids.len() > MAX_REQUEST_ITEMS {
+        return Err(format!(
+            "Too many items: maximum {} per request",
+            MAX_REQUEST_ITEMS
+        ));
     }
-    for item in &items {
-        if item.path.len() > 4096 {
-            return Err(format!(
-                "Path too long: {}...",
-                &item.path[..item.path.len().min(64)]
-            ));
-        }
-        if !scanner::KNOWN_CATEGORIES.contains(&item.category.as_str()) {
-            return Err(format!("Unknown category: {}", item.category));
-        }
-    }
-
-    // Enforce Docker preflight: refuse Docker cleanup if containers are running
-    let has_docker_items = items
-        .iter()
-        .any(|i| DOCKER_CATEGORIES.contains(&i.category.as_str()));
-    if has_docker_items {
-        logger.info(None, "Running Docker preflight check");
-        let preflight_result = preflight::run_preflight()
-            .await
-            .map_err(|e| e.to_string())?;
-        if preflight_result.docker_containers_active {
-            logger.error(None, "Docker containers are running, cleanup refused", None);
-            return Err(
-                "Cannot clean Docker volumes/images while containers are running. \
-                 Stop all containers first with `docker stop $(docker ps -q)`."
-                    .to_string(),
-            );
-        }
-    }
-
-    logger.info(None, &format!("Cleanup started ({} items)", items.len()));
 
     channel
         .send(CleanProgress::Started {
-            total_items: items.len(),
+            total_items: ids.len(),
         })
         .map_err(|e| e.to_string())?;
+    logger.info(None, &format!("Cleanup started ({} items)", ids.len()));
 
-    let registry = scanner::build_registry();
-    let mut results = Vec::new();
-    let mut total_freed: u64 = 0;
+    let (mut items, missing) = state.take(&ids);
+    let mut results: Vec<CleanResult> = Vec::with_capacity(ids.len());
+    let mut report = |result: CleanResult| {
+        let _ = channel.send(CleanProgress::ItemCompleted {
+            id: result.id.clone(),
+            success: result.success,
+            freed_bytes: result.freed_bytes,
+        });
+        results.push(result);
+    };
+
+    for id in missing {
+        report(CleanResult {
+            id,
+            freed_bytes: 0,
+            success: false,
+            error: Some("No longer available — it was already cleaned or the scan is outdated. Run a new scan.".to_string()),
+        });
+    }
+
+    // Docker images/volumes are never removed while containers run. Skip just those items.
     let mut audit_pairs: Vec<(ScanResult, CleanResult)> = Vec::new();
-
-    // Group items by category and clean via the appropriate scanner
-    for scanner in &registry {
-        let scanner_items: Vec<ScanResult> = items
-            .iter()
-            .filter(|i| scanner.handles_category(&i.category))
-            .cloned()
-            .collect();
-
-        if scanner_items.is_empty() {
-            continue;
-        }
-
-        match scanner.clean(&scanner_items).await {
-            Ok(clean_results) => {
-                for cr in &clean_results {
-                    total_freed += cr.freed_bytes;
-                    if cr.success {
-                        logger.success(
-                            Some(scanner.category()),
-                            &format!("Cleaned: {} ({} bytes freed)", cr.id, cr.freed_bytes),
-                            None,
-                            None,
-                        );
-                    } else {
-                        logger.error(
-                            Some(scanner.category()),
-                            &format!("Failed to clean: {}", cr.id),
-                            cr.error.as_deref(),
-                        );
-                    }
-                    channel
-                        .send(CleanProgress::ItemCompleted {
-                            id: cr.id.clone(),
-                            success: cr.success,
-                            freed_bytes: cr.freed_bytes,
-                        })
-                        .map_err(|e| e.to_string())?;
-
-                    // Collect for batch audit write
-                    if let Some(item) = items.iter().find(|i| i.id == cr.id) {
-                        audit_pairs.push((item.clone(), cr.clone()));
-                    }
-                }
-                results.extend(clean_results);
-            }
-            Err(e) => {
-                logger.error(
-                    Some(scanner.category()),
-                    &format!("Cleanup batch failed for {}", scanner.category()),
-                    Some(&e.to_string()),
-                );
-                for item in &scanner_items {
-                    channel
-                        .send(CleanProgress::Failed {
-                            id: item.id.clone(),
-                            error: e.to_string(),
-                        })
-                        .map_err(|e| e.to_string())?;
-                    results.push(CleanResult {
-                        id: item.id.clone(),
-                        freed_bytes: 0,
-                        success: false,
-                        error: Some(e.to_string()),
-                    });
-                }
+    let mut blocked = Vec::new();
+    if items
+        .iter()
+        .any(|i| DOCKER_CATEGORIES.contains(&i.category.as_str()))
+    {
+        let reason = match preflight::docker_containers_running().await {
+            Ok(false) => None,
+            Ok(true) => Some(
+                "Skipped: Docker containers are running. Stop them first (docker stop $(docker ps -q))."
+                    .to_string(),
+            ),
+            Err(e) => Some(format!("Skipped: {e}")),
+        };
+        if let Some(reason) = reason {
+            logger.warning(None, "Docker items skipped", Some(&reason));
+            let (docker, rest): (Vec<_>, Vec<_>) = items
+                .into_iter()
+                .partition(|i| DOCKER_CATEGORIES.contains(&i.category.as_str()));
+            items = rest;
+            for item in docker {
+                let result = scanner::error_result(&item, reason.clone());
+                audit_pairs.push((item.clone(), result.clone()));
+                report(result);
+                blocked.push(item);
             }
         }
     }
 
-    // Batch write all audit entries at once
-    let _ = audit::log_cleanup_batch(&audit_pairs);
+    let disk_before = get_disk_info_internal().await.ok();
+    let registry = scanner::build_registry();
+    let cleaned = cleanup::clean_items(&registry, &items, |item, result| {
+        if result.success {
+            logger.success(
+                Some(&item.category),
+                &format!(
+                    "Cleaned: {} ({} bytes freed)",
+                    item.label, result.freed_bytes
+                ),
+                None,
+                None,
+            );
+        } else {
+            logger.error(
+                Some(&item.category),
+                &format!("Failed to clean: {}", item.label),
+                result.error.as_deref(),
+            );
+        }
+        let _ = channel.send(CleanProgress::ItemCompleted {
+            id: result.id.clone(),
+            success: result.success,
+            freed_bytes: result.freed_bytes,
+        });
+    })
+    .await;
+    let disk_after = get_disk_info_internal().await.ok();
 
+    let mut failed = blocked;
+    for (item, result) in cleaned {
+        if !result.success {
+            failed.push(item.clone());
+        }
+        audit_pairs.push((item, result.clone()));
+        results.push(result);
+    }
+    // Failed items stay available for a retry; cleaned ones are gone for good.
+    state.restore(failed);
+
+    if let Err(e) = audit::log_cleanup_batch(&audit_pairs) {
+        logger.error(None, "Failed to write audit log", Some(&e.to_string()));
+    }
+
+    let freed_bytes: u64 = results.iter().map(|r| r.freed_bytes).sum();
+    let disk_freed_bytes = match (disk_before, disk_after) {
+        (Some(before), Some(after)) => after.free_bytes.saturating_sub(before.free_bytes),
+        _ => 0,
+    };
     logger.success(
         None,
-        &format!("Cleanup completed, {} bytes freed", total_freed),
+        &format!(
+            "Cleanup completed: {} bytes removed, disk free space +{} bytes",
+            freed_bytes, disk_freed_bytes
+        ),
         None,
         None,
     );
 
     channel
-        .send(CleanProgress::Completed { total_freed })
+        .send(CleanProgress::Completed {
+            total_freed: freed_bytes,
+        })
         .map_err(|e| e.to_string())?;
 
-    Ok(results)
+    Ok(CleanReport {
+        results,
+        freed_bytes,
+        disk_freed_bytes,
+    })
 }
 
 #[tauri::command]
@@ -321,15 +310,6 @@ pub async fn get_disk_info(logger: State<'_, ActivityLogger>) -> Result<DiskInfo
     result
 }
 
-async fn disk_info_or_default() -> DiskInfo {
-    get_disk_info_internal().await.unwrap_or(DiskInfo {
-        total_bytes: 0,
-        used_bytes: 0,
-        free_bytes: 0,
-        free_percent: 0.0,
-    })
-}
-
 pub(crate) async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
     let output = Command::new("df").args(["-k", "/"]).output().await?;
 
@@ -346,7 +326,7 @@ pub(crate) async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
 
     let total_kb: u64 = parts[1].parse()?;
     let free_kb: u64 = parts[3].parse()?;
-    let used_kb: u64 = total_kb - free_kb;
+    let used_kb: u64 = total_kb.saturating_sub(free_kb);
     let total_bytes = total_kb * 1024;
     let used_bytes = used_kb * 1024;
     let free_bytes = free_kb * 1024;
@@ -366,32 +346,12 @@ pub(crate) async fn get_disk_info_internal() -> anyhow::Result<DiskInfo> {
 
 #[tauri::command]
 pub async fn get_audit_log(limit: Option<usize>) -> Result<Vec<audit::AuditEntry>, String> {
-    audit::read_log(limit.unwrap_or(50)).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn run_preflight(
-    logger: State<'_, ActivityLogger>,
-) -> Result<preflight::PreflightResult, String> {
-    logger.info(None, "Running preflight checks");
-    let result = preflight::run_preflight().await.map_err(|e| e.to_string());
-    if let Ok(ref pf) = result {
-        logger.success(
-            None,
-            &format!(
-                "Preflight: docker={}, containers_active={}, {:.1}% free",
-                pf.docker_running, pf.docker_containers_active, pf.disk_free_percent
-            ),
-            None,
-            None,
-        );
-    }
-    result
+    audit::read_log(limit.unwrap_or(50).min(MAX_LOG_ENTRIES)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_activity_log(
     limit: Option<usize>,
 ) -> Result<Vec<crate::activity::ActivityEntry>, String> {
-    crate::activity::read_log(limit.unwrap_or(200)).map_err(|e| e.to_string())
+    crate::activity::read_log(limit.unwrap_or(200).min(MAX_LOG_ENTRIES)).map_err(|e| e.to_string())
 }

@@ -2,13 +2,11 @@ import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
   ScanReport,
   ScanProgress,
-  CleanResult,
+  CleanReport,
   CleanProgress,
-  ScanResult,
   DiskInfo,
   AuditEntry,
   ActivityEntry,
-  PreflightResult,
 } from "./types";
 
 export async function scanAll(
@@ -23,13 +21,15 @@ export async function cancelScan(): Promise<void> {
   return invoke<void>("cancel_scan");
 }
 
+/** Clean items from the last scan. Only IDs cross the IPC boundary: the backend
+ * decides what to delete from its own scan results. */
 export async function cleanItems(
-  items: ScanResult[],
+  ids: string[],
   onProgress: (progress: CleanProgress) => void,
-): Promise<CleanResult[]> {
+): Promise<CleanReport> {
   const channel = new Channel<CleanProgress>();
   channel.onmessage = onProgress;
-  return invoke<CleanResult[]>("clean_items", { items, channel });
+  return invoke<CleanReport>("clean_items", { ids, channel });
 }
 
 export async function getDiskInfo(): Promise<DiskInfo> {
@@ -38,10 +38,6 @@ export async function getDiskInfo(): Promise<DiskInfo> {
 
 export async function getAuditLog(limit: number = 50): Promise<AuditEntry[]> {
   return invoke<AuditEntry[]>("get_audit_log", { limit });
-}
-
-export async function runPreflight(): Promise<PreflightResult> {
-  return invoke<PreflightResult>("run_preflight");
 }
 
 export async function getActivityLog(

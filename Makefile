@@ -1,4 +1,4 @@
-.PHONY: dev dev-frontend dev-tauri build build-dmg lint format test clean help
+.PHONY: dev dev-frontend dev-tauri build build-dmg install lint format test clean help
 
 .DEFAULT_GOAL := help
 
@@ -31,6 +31,14 @@ build-dmg: ## Build macOS .dmg bundle (dmgbuild, bypasses broken AppleScript on 
 	$(eval VERSION := $(shell python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])"))
 	dmgbuild -s scripts/dmg-settings.py "macweep" \
 		src-tauri/target/release/bundle/dmg/macweep_$(VERSION)_aarch64.dmg
+
+install: ## Build .app and install to /Applications (no DMG)
+	npm run build
+	source $$HOME/.cargo/env && cargo tauri build --bundles app
+	@echo "Installing macweep to /Applications..."
+	rm -rf /Applications/macweep.app
+	cp -R src-tauri/target/release/bundle/macos/macweep.app /Applications/
+	@echo "✓ macweep installed to /Applications/macweep.app"
 
 format: ## Format Rust + frontend code (prettier via Docker)
 	cd src-tauri && source $$HOME/.cargo/env && cargo fmt

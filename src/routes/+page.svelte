@@ -1,48 +1,11 @@
 <script lang="ts">
 	import { scanStore } from '$lib/stores/scan.svelte';
 	import { appStore } from '$lib/stores/app.svelte';
-	import { toastStore } from '$lib/stores/toasts.svelte';
-	import { scanAll, cancelScan, getDiskInfo } from '$lib/tauri/commands';
-	import { sanitizeError } from '$lib/utils/errors';
 	import DiskUsageBar from '$lib/components/dashboard/DiskUsageBar.svelte';
 	import SpaceSummary from '$lib/components/dashboard/SpaceSummary.svelte';
 	import CategoryGrid from '$lib/components/dashboard/CategoryGrid.svelte';
 	import QuickActions from '$lib/components/dashboard/QuickActions.svelte';
 	import ScanProgress from '$lib/components/scan/ScanProgress.svelte';
-
-	let wasCancelled = false;
-
-	async function handleScan() {
-		scanStore.reset();
-		wasCancelled = false;
-		try {
-			const report = await scanAll((progress) => {
-				if (!wasCancelled) {
-					scanStore.handleProgress(progress);
-				}
-			});
-			if (!wasCancelled && report.items.length > 0) {
-				scanStore.setReport(report);
-				appStore.diskInfo = await getDiskInfo();
-			}
-		} catch (e) {
-			if (!wasCancelled) {
-				toastStore.error(`Scan failed: ${sanitizeError(e)}`);
-			}
-		}
-	}
-
-	async function handleStop() {
-		wasCancelled = true;
-		scanStore.status = 'idle';
-		scanStore.currentScanner = null;
-		try {
-			await cancelScan();
-		} catch {
-			// best-effort
-		}
-		toastStore.info('Scan stopped');
-	}
 </script>
 
 <div class="dashboard">
@@ -54,7 +17,7 @@
 		<SpaceSummary />
 	{/if}
 
-	<QuickActions onscan={handleScan} onstop={handleStop} />
+	<QuickActions />
 
 	{#if scanStore.status === 'scanning'}
 		<div class="scan-section">
@@ -74,6 +37,8 @@
 		margin: 0 auto;
 		width: 100%;
 		min-height: 100%;
+		/* Keeps the last category reachable above the floating selection bar. */
+		padding-bottom: 64px;
 	}
 
 	.scan-section {
@@ -81,5 +46,6 @@
 		background: var(--bg-raised);
 		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-lg);
+		box-shadow: var(--highlight);
 	}
 </style>

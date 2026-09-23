@@ -1,59 +1,69 @@
 /* ═══════════════════════════════════════════════
-   macweep — Precision Instrument Design System
+   macweep — design system
+   Dark, native-feeling macOS utility. One brand accent (the logo's cyan);
+   risk colors are reserved for risk and nothing else.
    ═══════════════════════════════════════════════ */
 
 :root {
-  /* ── Base Palette ── */
-  --void: #05060a;
-  --bg-base: #0b0c12;
-  --bg-raised: #12131a;
-  --bg-surface: #181922;
-  --bg-overlay: #1e1f2a;
-  --bg-hover: #242532;
-  --bg-active: #2c2d3c;
+  color-scheme: dark;
 
-  /* ── Text ── */
-  --text-primary: #e2e3ea;
-  --text-secondary: #7d7f8c;
-  --text-muted: #484a57;
-  --text-inverse: #0b0c12;
+  /* ── Neutrals (cool graphite, tuned to sit with the cyan brand) ── */
+  --bg-base: #0e1014;
+  --bg-raised: #14171c;
+  --bg-surface: #1a1d23;
+  --bg-overlay: #20242b;
+  --bg-hover: #262a32;
+  --bg-active: #2e333c;
 
-  /* ── Accent (warm gold) ── */
-  --accent: #cda630;
-  --accent-hover: #ddb83e;
-  --accent-dim: #9a7b22;
-  --accent-glow: rgba(205, 166, 48, 0.1);
-  --accent-glow-strong: rgba(205, 166, 48, 0.2);
+  /* ── Text (contrast on --bg-base: 15.5 / 7.3 / 4.9 : 1) ── */
+  --text-primary: #e6e8ec;
+  --text-secondary: #9ba1ab;
+  --text-muted: #7b818c;
+  --text-inverse: #062a33; /* ink on bright fills: accent, risk colors */
 
-  /* ── Risk Spectrum ── */
-  --risk-zero: #2dd478;
-  --risk-zero-dim: rgba(45, 212, 120, 0.1);
-  --risk-low: #cda630;
-  --risk-low-dim: rgba(205, 166, 48, 0.1);
-  --risk-medium: #e07a3d;
-  --risk-medium-dim: rgba(224, 122, 61, 0.1);
-  --risk-high: #dc4242;
-  --risk-high-dim: rgba(220, 66, 66, 0.1);
+  /* ── Brand accent (logo cyan) ── */
+  --accent: #22d3ee;
+  --accent-hover: #67e8f9;
+  --accent-dim: #5fc4d8;
+  --accent-glow: rgba(34, 211, 238, 0.1);
+  --accent-glow-strong: rgba(34, 211, 238, 0.22);
+
+  /* ── Risk spectrum ── */
+  --risk-zero: #34d399;
+  --risk-zero-dim: rgba(52, 211, 153, 0.12);
+  --risk-low: #e0b23c;
+  --risk-low-dim: rgba(224, 178, 60, 0.12);
+  --risk-medium: #f0883e;
+  --risk-medium-dim: rgba(240, 136, 62, 0.12);
+  --risk-high: #f2555a;
+  --risk-high-dim: rgba(242, 85, 90, 0.12);
+  --danger-fill: #c9363c; /* destructive buttons: white label at 5.2:1 */
 
   /* ── Semantic ── */
-  --success: #2dd478;
-  --error: #dc4242;
-  --warning: #e07a3d;
-  --info: #5b9cf5;
+  --success: var(--risk-zero);
+  --error: var(--risk-high);
+  --warning: var(--risk-medium);
+  --info: #60a5fa;
 
   /* ── Borders ── */
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-default: rgba(255, 255, 255, 0.07);
-  --border-hover: rgba(255, 255, 255, 0.12);
-  --border-accent: rgba(205, 166, 48, 0.3);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-hover: rgba(255, 255, 255, 0.16);
 
   /* ── Typography ── */
   --font-sans:
-    -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui,
-    sans-serif;
-  --font-mono:
-    "SF Mono", "Berkeley Mono", "JetBrains Mono", "Fira Code", ui-monospace,
-    monospace;
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-display: 34px;
 
   /* ── Spacing ── */
   --space-2xs: 2px;
@@ -67,25 +77,23 @@
   --space-3xl: 64px;
 
   /* ── Radii ── */
-  --radius-sm: 4px;
+  --radius-sm: 5px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 16px;
   --radius-round: 9999px;
 
-  /* ── Shadows ── */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 24px var(--accent-glow);
+  /* ── Elevation ── */
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px -6px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 18px 48px -10px rgba(0, 0, 0, 0.65);
 
-  /* ── Transitions ── */
+  /* ── Motion ── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --duration-slow: 400ms;
-  --duration-dramatic: 700ms;
 }
 
 /* ═══ Reset & Base ═══ */
@@ -99,7 +107,7 @@
 }
 
 html {
-  font-size: 13px;
+  font-size: var(--text-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -109,11 +117,13 @@ body {
   font-family: var(--font-sans);
   font-weight: 400;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   background: var(--bg-base);
   overflow: hidden;
   min-height: 100vh;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 button {
@@ -126,7 +136,7 @@ button {
 }
 
 button:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -135,11 +145,221 @@ a {
   text-decoration: none;
 }
 
+/* Paths, commands and error messages must be copyable. */
+code,
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+/* ═══ Buttons ═══ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
+}
+
+.btn-lg {
+  height: 34px;
+  padding: 0 18px;
+}
+
+.btn-pill {
+  border-radius: var(--radius-round);
+}
+
+/* Filled with the brand accent — one per view. */
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-overlay);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* Soft button colored by --tint (risk or status color). */
+.btn-tinted {
+  --tint: var(--accent);
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tint) 26%, transparent);
+  color: var(--tint);
+}
+
+.btn-tinted:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tint) 18%, transparent);
+  border-color: color-mix(in srgb, var(--tint) 42%, transparent);
+}
+
+/* Solid button colored by --tint, for the confirm action of a risk step. */
+.btn-solid {
+  --tint: var(--accent);
+  background: var(--tint);
+  color: var(--text-inverse);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.btn-solid:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-danger {
+  background: var(--danger-fill);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* ═══ Checkbox ═══ */
+
+input[type="checkbox"] {
+  --check-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base) center / 10px 10px no-repeat;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--text-muted);
+}
+
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate {
+  background-color: var(--check-color);
+  border-color: var(--check-color);
+}
+
+input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23062a33' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.5 5h5' fill='none' stroke='%23062a33' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* ═══ Cleanup confirmation steps (shared by Confirm{Zero,Low,Medium,High}) ═══ */
+
+.confirm-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-base);
+  animation: slideUp var(--duration-slow) var(--ease-out);
+}
+
+.confirm-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.confirm-icon {
+  --tone: var(--accent);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 13%, transparent);
+}
+
+.confirm-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.confirm-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.confirm-size {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.confirm-path {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Short caution attached to an item (e.g. uncommitted Git changes). */
+.confirm-warning {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--risk-medium);
+  white-space: nowrap;
+}
+
 /* ═══ Scrollbar ═══ */
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -169,18 +389,7 @@ a {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -191,7 +400,7 @@ a {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -215,25 +424,6 @@ a {
   }
 }
 
-@keyframes sweep {
-  from {
-    background-position: -200% 0;
-  }
-  to {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 8px var(--accent-glow);
-  }
-  50% {
-    box-shadow: 0 0 24px var(--accent-glow-strong);
-  }
-}
-
 @keyframes radar-ring {
   0% {
     transform: scale(0.85);
@@ -245,36 +435,14 @@ a {
   }
 }
 
-@keyframes dissolve {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.96);
-    filter: blur(3px);
-  }
-}
-
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(20px) scale(0.96);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes stroke-draw {
-  from {
-    stroke-dashoffset: var(--circumference);
-  }
-  to {
-    stroke-dashoffset: var(--dash-offset);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -284,7 +452,7 @@ a {
     opacity: 0;
   }
   60% {
-    transform: scale(1.15);
+    transform: scale(1.12);
   }
   100% {
     transform: scale(1);
@@ -301,17 +469,25 @@ a {
   }
 }
 
-/* ═══ Selection ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══ Selection & Focus ═══ */
 
 ::selection {
   background: var(--accent-glow-strong);
   color: var(--text-primary);
 }
 
-/* ═══ Focus ═══ */
-
+/* The outline follows each element's own radius; never reshape it on focus. */
 :focus-visible {
-  outline: 1.5px solid var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }

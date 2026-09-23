@@ -18,25 +18,28 @@
 	const confirmedItems = $derived(items.filter((i) => confirmedIds.has(i.id)));
 </script>
 
-<div class="confirm">
-	<div class="warning-bar">
+<div class="confirm-step">
+	<div class="warning-bar" role="note">
 		<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
 			<path d="M8 2L1.5 13.5h13L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
 			<path d="M8 7v3M8 12v0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 		</svg>
-		<span>May contain important state or data. Type the name to confirm each item.</span>
+		<span>These may hold data you can't get back. Type each name to confirm it.</span>
 	</div>
 
 	<div class="items">
-		{#each items as item, i (item.id)}
-			<div class="item" class:confirmed={confirmedIds.has(item.id)} style="animation-delay: {i * 40}ms">
+		{#each items as item (item.id)}
+			<div class="item" class:confirmed={confirmedIds.has(item.id)}>
 				<div class="item-header">
 					<div class="item-title">
 						<span class="item-label">{item.label}</span>
-						<span class="item-size">{formatSize(item.size_bytes)}</span>
+						<span class="confirm-size">{formatSize(item.size_bytes)}</span>
 					</div>
 					<span class="item-detail">{item.detail}</span>
-					<span class="item-path">{item.path}</span>
+					{#if item.warning}
+						<span class="confirm-warning wrap">{item.warning}</span>
+					{/if}
+					<span class="confirm-path path selectable">{item.path}</span>
 				</div>
 
 				{#if !confirmedIds.has(item.id)}
@@ -55,10 +58,10 @@
 		{/each}
 	</div>
 
-	<div class="actions">
-		<button class="btn btn-skip" onclick={onskip}>Skip</button>
+	<div class="confirm-actions">
+		<button class="btn btn-secondary" onclick={onskip}>Skip</button>
 		<button
-			class="btn btn-delete"
+			class="btn btn-danger"
 			disabled={confirmedItems.length === 0}
 			onclick={() => onconfirm(confirmedItems)}
 		>
@@ -68,8 +71,6 @@
 </div>
 
 <style>
-	@import './confirm-shared.css';
-
 	.warning-bar {
 		display: flex;
 		align-items: center;
@@ -78,7 +79,7 @@
 		background: var(--risk-high-dim);
 		border: 1px solid color-mix(in srgb, var(--risk-high) 25%, transparent);
 		border-radius: var(--radius-md);
-		font-size: 12px;
+		font-size: var(--text-sm);
 		color: var(--risk-high);
 		line-height: 1.4;
 	}
@@ -101,47 +102,47 @@
 		background: var(--bg-raised);
 		border: 1px solid var(--border-default);
 		border-radius: var(--radius-md);
-		transition: border-color var(--duration-base);
-		animation: fadeIn var(--duration-base) var(--ease-out) both;
+		box-shadow: var(--highlight);
+		transition: border-color var(--duration-base) var(--ease-out);
 	}
 
 	.item.confirmed {
-		border-color: color-mix(in srgb, var(--risk-zero) 30%, transparent);
+		border-color: color-mix(in srgb, var(--risk-high) 40%, transparent);
 	}
 
 	.item-header {
 		display: flex;
 		flex-direction: column;
-		gap: 3px;
+		gap: 2px;
 	}
 
 	.item-title {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: var(--space-md);
 	}
 
 	.item-label {
 		font-weight: 600;
-		font-size: 13px;
+		font-size: var(--text-base);
 	}
 
-	.item-size { font-size: 12px; }
-
 	.item-detail {
-		font-size: 11px;
+		font-size: var(--text-sm);
 		color: var(--text-secondary);
 	}
 
-	.item-path {
-		font-size: 10px;
-		color: var(--text-muted);
-		font-family: var(--font-mono);
+	.wrap {
+		white-space: normal;
+	}
+
+	.path {
 		word-break: break-all;
 	}
 
 	.confirm-zone {
-		padding-top: var(--space-sm);
+		padding-top: var(--space-md);
 		border-top: 1px solid var(--border-subtle);
 	}
 
@@ -149,18 +150,11 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		color: var(--risk-zero);
-		font-size: 11px;
+		color: var(--risk-high);
+		font-size: var(--text-sm);
 		font-weight: 600;
-		padding-top: var(--space-sm);
+		padding-top: var(--space-md);
 		border-top: 1px solid var(--border-subtle);
-		animation: check-pop 0.3s var(--ease-spring);
+		animation: fadeIn var(--duration-base) var(--ease-out);
 	}
-
-	.btn-delete {
-		background: var(--risk-high);
-		color: white;
-	}
-
-	.btn-delete:hover:not(:disabled) { opacity: 0.9; }
 </style>

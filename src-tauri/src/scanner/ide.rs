@@ -62,7 +62,7 @@ impl Scanner for IdeScanner {
         Ok(items)
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         scanner::clean_filesystem_items(items).await
     }
 }

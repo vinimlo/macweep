@@ -51,7 +51,7 @@ SCAN ──→ CATEGORIZE ──→ SELECT ──→ CONFIRM ──→ CLEAN ─
   │     risk-sorted    interactive  flow matches  async   audit
   │      dashboard      checkboxes  risk level    tokio   trail
   │
-  13 scanners in parallel
+  13 scanners
 ```
 
 macweep scans your system across **13 categories**, groups findings by risk level, and lets you pick exactly what to remove — with confirmation flows that match the stakes.
@@ -128,19 +128,26 @@ macweep is paranoid by design.
 - `~/Documents`, `~/Desktop`, `~/Downloads`, `~/Pictures`
 - `~/.ssh`, `~/.gnupg`, `~/.gitconfig`, `~/.zshrc`
 - `~/Library/Keychains`, iCloud backups
-- Any Git repo with uncommitted changes
+- Symlinks, and anything that resolves outside its parent directory
 
-**Pre-flight checks:**
-- Won't remove Docker resources while containers are running
-- Detects which tools are actually installed before scanning
-- Skips cleanup prompt if disk has >30% free
+**Checks before deleting:**
+- Docker images and volumes are skipped while any container is running
+- `node_modules` in a Git repo with uncommitted changes is flagged with a warning
+- Only what the last scan found can be cleaned — the UI sends item IDs, never paths
+
+**Honest numbers:**
+Folders are measured right before and right after removal, so the report shows what actually left the disk, next to how much free space the disk gained. Items that fail are listed with the reason and stay available for a retry.
 
 **Audit trail:**
-Every action is logged to `~/.storage-cleanup/audit.jsonl` — what was removed, when, how much space was freed. Viewable in the activity drawer.
+Every action is logged to `~/.storage-cleanup/audit.jsonl` — what was removed, when, how much space was freed. Viewable in the History tab.
 
 ---
 
-## Quick Start
+## Install
+
+Download the `.dmg` from [Releases](https://github.com/vinimlo/macweep/releases) (Apple Silicon). The app is not notarized yet, so the first launch is blocked by Gatekeeper: open **System Settings → Privacy & Security** and click **Open Anyway** next to the macweep message.
+
+## Build from Source
 
 ### Prerequisites
 
@@ -165,7 +172,7 @@ make dev
 ### Build
 
 ```bash
-make build    # Produces a .dmg in src-tauri/target/release/bundle/
+make build-dmg    # .dmg in src-tauri/target/release/bundle/dmg/
 ```
 
 ---
@@ -208,9 +215,9 @@ make build    # Produces a .dmg in src-tauri/target/release/bundle/
 
 macweep lives in your menu bar for quick access:
 
-- **Auto-clean safe** — one-click zero-risk cleanup
-- **Full scan** — open the dashboard
-- **Last cleanup** — summary of the most recent session
+- **Auto-clean Safe** — opens the zero-risk confirmation (scans first if needed)
+- **Full Scan** — opens the dashboard and starts a scan
+- **Open Dashboard** / **Quit macweep**
 
 ---
 
@@ -220,11 +227,13 @@ macweep lives in your menu bar for quick access:
 macweep/
 ├── src-tauri/                 # Rust backend
 │   └── src/
-│       ├── main.rs            # Tauri command registration
+│       ├── lib.rs             # App builder, command registration
 │       ├── commands.rs        # IPC command handlers
+│       ├── state.rs           # Scan generations + last scan's items
+│       ├── cleanup.rs         # Cleanup orchestration + measurement
 │       ├── scanner/           # Scanner trait + 13 implementations
-│       ├── safety/            # Protected paths, pre-flight checks
-│       └── activity.rs        # JSONL audit logger
+│       ├── safety/            # Protected paths, pre-flight, audit trail
+│       └── activity.rs        # Activity log (JSONL + UI events)
 ├── src/                       # SvelteKit frontend
 │   ├── routes/                # Dashboard pages
 │   └── lib/

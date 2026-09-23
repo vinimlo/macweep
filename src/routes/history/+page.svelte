@@ -57,12 +57,12 @@
 			</div>
 			<div class="stat-card stat-ops">
 				<div class="stat-value">{successCount}</div>
-				<div class="stat-label">{successCount === 1 ? 'cleanup' : 'cleanups'}</div>
+				<div class="stat-label">{successCount === 1 ? 'Item cleaned' : 'Items cleaned'}</div>
 			</div>
 			{#if failedCount > 0}
 				<div class="stat-card stat-failed">
 					<div class="stat-value">{failedCount}</div>
-					<div class="stat-label">{failedCount === 1 ? 'failure' : 'failures'}</div>
+					<div class="stat-label">{failedCount === 1 ? 'Failure' : 'Failures'}</div>
 				</div>
 			{/if}
 			<div class="stat-card stat-rate">
@@ -126,7 +126,6 @@
 								class="entry"
 								class:failed={!entry.success}
 								class:expanded={isExpanded}
-								style="animation-delay: {i * 25}ms"
 								onclick={() => toggleEntry(entryId(entry))}
 								onkeydown={(e) => { if (e.key === 'Enter') toggleEntry(entryId(entry)); }}
 								role="button"
@@ -171,7 +170,7 @@
 										<div class="entry-details">
 											<div class="detail-row">
 												<span class="detail-key">Path</span>
-												<span class="detail-val mono">{entry.path}</span>
+												<span class="detail-val mono selectable">{entry.path}</span>
 											</div>
 											{#if entry.success}
 												<div class="detail-row">
@@ -185,7 +184,7 @@
 											{:else if entry.error}
 												<div class="detail-row">
 													<span class="detail-key">Error</span>
-													<span class="detail-val error">{entry.error}</span>
+													<span class="detail-val error selectable">{entry.error}</span>
 												</div>
 											{/if}
 											<div class="detail-row">
@@ -237,23 +236,19 @@
 	}
 
 	.stat-value {
-		font-family: var(--font-mono);
-		font-size: 16px;
-		font-weight: 700;
-		font-variant-numeric: tabular-nums;
-		letter-spacing: -0.02em;
+		font-size: var(--text-xl);
+		font-weight: 600;
+		letter-spacing: -0.01em;
 	}
 
 	.stat-freed .stat-value { color: var(--risk-zero); }
 	.stat-ops .stat-value { color: var(--text-primary); }
 	.stat-failed .stat-value { color: var(--risk-high); }
-	.stat-rate .stat-value { color: var(--accent); }
+	.stat-rate .stat-value { color: var(--text-primary); }
 
 	.stat-label {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
 		font-weight: 500;
 	}
 
@@ -267,7 +262,7 @@
 	}
 
 	h2 {
-		font-size: 16px;
+		font-size: var(--text-xl);
 		font-weight: 600;
 		letter-spacing: -0.01em;
 		flex-shrink: 0;
@@ -281,21 +276,24 @@
 	}
 
 	.cat-chip {
-		padding: 3px 10px;
-		font-size: 10px;
+		padding: 2px 10px;
+		font-size: var(--text-xs);
 		font-weight: 500;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		background: none;
-		border: 1px solid var(--border-subtle);
+		border: 1px solid var(--border-default);
 		border-radius: var(--radius-round);
 		cursor: pointer;
-		transition: all var(--duration-fast) var(--ease-out);
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			border-color var(--duration-fast) var(--ease-out);
 		white-space: nowrap;
 	}
 
 	.cat-chip:hover {
-		color: var(--text-secondary);
-		border-color: var(--border-default);
+		color: var(--text-primary);
+		border-color: var(--border-hover);
 	}
 
 	.cat-chip.active {
@@ -328,14 +326,14 @@
 	}
 
 	.empty-title {
-		font-size: 14px;
+		font-size: var(--text-lg);
 		font-weight: 600;
 		color: var(--text-secondary);
 		margin-bottom: var(--space-xs);
 	}
 
 	.empty-detail {
-		font-size: 12px;
+		font-size: var(--text-sm);
 		color: var(--text-muted);
 		max-width: 280px;
 		line-height: 1.5;
@@ -370,10 +368,8 @@
 	}
 
 	.date-label {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
 		color: var(--text-muted);
 		white-space: nowrap;
 	}
@@ -392,7 +388,6 @@
 		cursor: pointer;
 		border-radius: var(--radius-md);
 		transition: background var(--duration-fast);
-		animation: fadeIn var(--duration-base) var(--ease-out) both;
 	}
 
 	.entry:hover {
@@ -424,12 +419,10 @@
 
 	.indicator-dot.success {
 		background: var(--risk-zero);
-		box-shadow: 0 0 6px var(--risk-zero-dim);
 	}
 
 	.indicator-dot.failed {
 		background: var(--risk-high);
-		box-shadow: 0 0 6px var(--risk-high-dim);
 	}
 
 	.indicator-line {
@@ -466,7 +459,7 @@
 
 	.entry-label {
 		font-weight: 600;
-		font-size: 12px;
+		font-size: var(--text-base);
 		color: var(--text-primary);
 		white-space: nowrap;
 		overflow: hidden;
@@ -474,14 +467,12 @@
 	}
 
 	.entry-cat {
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
+		font-family: var(--font-mono);
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
 		background: var(--bg-overlay);
 		padding: 1px 6px;
-		border-radius: 3px;
+		border-radius: 4px;
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
@@ -491,15 +482,13 @@
 	}
 
 	.freed-badge {
-		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: var(--text-sm);
 		font-weight: 600;
 		color: var(--risk-zero);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.error-badge {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		font-weight: 600;
 		color: var(--risk-high);
 		background: var(--risk-high-dim);
@@ -514,14 +503,12 @@
 	}
 
 	.entry-time {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		color: var(--text-muted);
-		font-family: var(--font-mono);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.entry-action {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		color: var(--text-muted);
 	}
 
@@ -546,24 +533,22 @@
 	}
 
 	.detail-key {
-		font-size: 10px;
-		font-weight: 600;
+		font-size: var(--text-xs);
+		font-weight: 500;
 		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
 		width: 56px;
 		flex-shrink: 0;
 	}
 
 	.detail-val {
-		font-size: 11px;
+		font-size: var(--text-sm);
 		color: var(--text-secondary);
 		word-break: break-all;
 	}
 
 	.detail-val.mono {
 		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: var(--text-xs);
 	}
 
 	.detail-val.error {

@@ -1,11 +1,8 @@
 <script lang="ts">
 	import Spinner from '$lib/components/shared/Spinner.svelte';
+	import type { ScannerStatus } from '$lib/stores/scan.svelte';
 
-	let { category, status, index = 0 }: {
-		category: string;
-		status: 'pending' | 'scanning' | 'completed' | 'failed';
-		index?: number;
-	} = $props();
+	let { category, status }: { category: string; status: ScannerStatus } = $props();
 </script>
 
 <div
@@ -14,7 +11,6 @@
 	class:scanning={status === 'scanning'}
 	class:completed={status === 'completed'}
 	class:failed={status === 'failed'}
-	style="animation-delay: {index * 25}ms"
 >
 	<span class="status-icon">
 		{#if status === 'scanning'}
@@ -39,10 +35,12 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
-		padding: 5px var(--space-sm);
+		padding: 4px var(--space-sm);
 		border-radius: var(--radius-sm);
-		font-size: 12px;
-		transition: all var(--duration-base) var(--ease-out);
+		font-size: var(--text-sm);
+		transition:
+			color var(--duration-base) var(--ease-out),
+			background-color var(--duration-base) var(--ease-out);
 		animation: fadeIn var(--duration-base) var(--ease-out) both;
 	}
 
@@ -81,7 +79,6 @@
 
 	.category {
 		font-family: var(--font-mono);
-		font-size: 11px;
-		letter-spacing: 0.01em;
+		font-size: var(--text-xs);
 	}
 </style>

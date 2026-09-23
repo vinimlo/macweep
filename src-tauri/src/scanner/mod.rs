@@ -24,7 +24,9 @@ pub trait Scanner: Send + Sync {
     }
     async fn is_available(&self) -> bool;
     async fn scan(&self) -> Result<Vec<ScanResult>>;
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>>;
+    /// Clean the given items, returning exactly one result per item.
+    /// A failure on one item must never abort the others.
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult>;
 }
 
 pub fn build_registry() -> Vec<Box<dyn Scanner>> {
@@ -49,10 +51,10 @@ pub fn build_registry() -> Vec<Box<dyn Scanner>> {
     ]
 }
 
-/// Run an external command with a timeout (default 30s).
-/// Returns an error if the command exceeds the timeout.
+/// Run an external command with a timeout. The child is killed if the timeout expires,
+/// so a slow command never keeps running unobserved in the background.
 pub async fn run_with_timeout(cmd: &mut Command, secs: u64) -> Result<std::process::Output> {
-    timeout(Duration::from_secs(secs), cmd.output())
+    timeout(Duration::from_secs(secs), cmd.kill_on_drop(true).output())
         .await
         .map_err(|_| anyhow::anyhow!("Command timed out after {}s", secs))?
         .map_err(Into::into)
@@ -75,22 +77,24 @@ pub async fn dir_size_bytes(path: &str) -> u64 {
         * 1024
 }
 
-/// Build a `CleanResult` from a command's output.
-/// Used by scanners that clean via an external CLI command.
-pub fn command_to_clean_result(item: &ScanResult, output: &std::process::Output) -> CleanResult {
-    CleanResult {
-        id: item.id.clone(),
-        freed_bytes: if output.status.success() {
-            item.size_bytes
-        } else {
-            0
-        },
-        success: output.status.success(),
-        error: if output.status.success() {
-            None
-        } else {
-            Some(String::from_utf8_lossy(&output.stderr).to_string())
-        },
+/// Clean one item with an external CLI command. Spawn errors (tool not on PATH),
+/// timeouts and non-zero exits all become a failed result for this item only.
+pub async fn clean_with_command(item: &ScanResult, cmd: &mut Command, secs: u64) -> CleanResult {
+    match run_with_timeout(cmd, secs).await {
+        Ok(output) if output.status.success() => success_result(item),
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let message = stderr.trim();
+            error_result(
+                item,
+                if message.is_empty() {
+                    format!("Command failed ({})", output.status)
+                } else {
+                    message.to_string()
+                },
+            )
+        }
+        Err(e) => error_result(item, e.to_string()),
     }
 }
 
@@ -150,15 +154,17 @@ pub async fn tool_installed(cmd: &str) -> bool {
 
 /// Clean filesystem items with the standard validate-and-remove pattern.
 /// Checks existence, validates against protected paths, then removes.
-pub async fn clean_filesystem_items(
-    items: &[crate::models::ScanResult],
-) -> Result<Vec<crate::models::CleanResult>> {
+pub async fn clean_filesystem_items(items: &[ScanResult]) -> Vec<CleanResult> {
     use crate::safety::protected_paths;
     let mut results = Vec::new();
     for item in items {
         let path = std::path::Path::new(&item.path);
         if !path.exists() {
-            results.push(success_result(item));
+            // Removed by something else since the scan: nothing was freed by us.
+            results.push(CleanResult {
+                freed_bytes: 0,
+                ..success_result(item)
+            });
             continue;
         }
         if let Err(e) = protected_paths::validate_before_delete(path) {
@@ -170,35 +176,5 @@ pub async fn clean_filesystem_items(
             Err(e) => results.push(error_result(item, format!("Failed to remove: {}", e))),
         }
     }
-    Ok(results)
+    results
 }
-
-/// All known item-level categories for input validation.
-pub const KNOWN_CATEGORIES: &[&str] = &[
-    // Scanner-level categories
-    "brew-cache",
-    "pip-cache",
-    "node-cache",
-    "docker-build",
-    "system-cache",
-    "node-modules",
-    "docker-images",
-    "docker-volumes-orphan",
-    "ai-tools",
-    "ide-unused",
-    "docker-volumes-named",
-    "app-support",
-    "logs",
-    // Item-level categories (sub-categories)
-    "npm-cache",
-    "yarn-cache",
-    "bun-cache",
-    "ts-cache",
-    "cursor-updates",
-    "next-cache",
-    "ollama-models",
-    "langflow",
-    "gemini-cache",
-    "coderabbit",
-    "opencode",
-];

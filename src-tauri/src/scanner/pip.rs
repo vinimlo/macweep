@@ -44,16 +44,13 @@ impl Scanner for PipScanner {
         }])
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         let mut results = Vec::new();
         for item in items {
-            let output = Command::new("pip3")
-                .args(["cache", "purge"])
-                .output()
-                .await?;
-
-            results.push(scanner::command_to_clean_result(item, &output));
+            let mut cmd = Command::new("pip3");
+            cmd.args(["cache", "purge"]);
+            results.push(scanner::clean_with_command(item, &mut cmd, 120).await);
         }
-        Ok(results)
+        results
     }
 }

@@ -11,18 +11,18 @@
 
 	const filters: { label: string; value: ActivityFilter; dot?: string }[] = [
 		{ label: 'All', value: 'all' },
-		{ label: 'Commands', value: 'commands', dot: 'var(--accent-dim)' },
+		{ label: 'Commands', value: 'commands', dot: 'var(--accent)' },
 		{ label: 'Errors', value: 'errors', dot: 'var(--risk-high)' },
 		{ label: 'Success', value: 'success', dot: 'var(--risk-zero)' }
 	];
 
 	function levelColor(level: string): string {
 		switch (level) {
-			case 'Command': return 'var(--accent-dim)';
+			case 'Command': return 'var(--accent)';
 			case 'Error': return 'var(--risk-high)';
 			case 'Warning': return 'var(--risk-medium)';
 			case 'Success': return 'var(--risk-zero)';
-			default: return 'var(--border-hover)';
+			default: return 'var(--bg-active)';
 		}
 	}
 
@@ -162,7 +162,7 @@
 			onscroll={handleScroll}
 		>
 			{#each activityStore.filteredEntries as entry, i (i + ':' + entry.timestamp)}
-				<div class="log-entry" style="--entry-color: {levelColor(entry.level)}; animation-delay: {Math.min(i, 20) * 15}ms">
+				<div class="log-entry" style="--entry-color: {levelColor(entry.level)}">
 					<div class="entry-gutter">
 						<span class="entry-icon">{levelIcon(entry.level)}</span>
 					</div>
@@ -170,13 +170,13 @@
 					<div class="entry-body">
 						<div class="entry-main">
 							{#if entry.level === 'Command' && entry.command}
-								<span class="entry-command">$ {entry.command}</span>
+								<span class="entry-command selectable">$ {entry.command}</span>
 							{:else}
-								<span class="entry-message">{entry.message}</span>
+								<span class="entry-message selectable">{entry.message}</span>
 							{/if}
 
 							{#if entry.detail}
-								<span class="entry-detail">{entry.detail}</span>
+								<span class="entry-detail selectable" title={entry.detail}>{entry.detail}</span>
 							{/if}
 						</div>
 
@@ -285,7 +285,7 @@
 		background: none;
 		color: var(--text-secondary);
 		font-family: var(--font-sans);
-		font-size: 11px;
+		font-size: var(--text-xs);
 		width: 100%;
 		text-align: left;
 		flex-shrink: 0;
@@ -320,7 +320,7 @@
 
 	.error-pip {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		font-weight: 700;
 		color: var(--risk-high);
 		background: var(--risk-high-dim);
@@ -349,7 +349,7 @@
 
 	.bar-preview-msg {
 		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: var(--text-2xs);
 		color: var(--text-secondary);
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -359,7 +359,7 @@
 
 	.bar-preview-time {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
 		flex-shrink: 0;
 		margin-left: auto;
@@ -383,11 +383,14 @@
 		border: none;
 		background: none;
 		color: var(--text-muted);
-		font-size: 10px;
+		font-size: var(--text-2xs);
 		font-family: var(--font-sans);
 		border-radius: var(--radius-round);
 		cursor: pointer;
-		transition: all var(--duration-fast) var(--ease-out);
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			border-color var(--duration-fast) var(--ease-out);
 		white-space: nowrap;
 	}
 
@@ -424,7 +427,10 @@
 		border-radius: var(--radius-sm);
 		color: var(--text-muted);
 		cursor: pointer;
-		transition: all var(--duration-fast) var(--ease-out);
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			border-color var(--duration-fast) var(--ease-out);
 	}
 
 	.toolbar-action:hover {
@@ -443,7 +449,7 @@
 
 	.entry-badge {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		font-weight: 600;
 		color: var(--text-muted);
 		background: var(--bg-active);
@@ -475,10 +481,9 @@
 		display: flex;
 		gap: 0;
 		padding: 3px var(--space-sm);
-		border-left: 3px solid transparent;
-		border-left-color: var(--entry-color);
-		transition: background var(--duration-fast);
-		animation: entrySlide var(--duration-base) var(--ease-out) both;
+		border-left: 2px solid var(--entry-color);
+		transition: background-color var(--duration-fast);
+		animation: entrySlide var(--duration-base) var(--ease-out);
 	}
 
 	.log-entry:hover {
@@ -507,7 +512,7 @@
 
 	.entry-icon {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		font-weight: 700;
 		color: var(--entry-color);
 		line-height: 1;
@@ -531,7 +536,7 @@
 
 	.entry-message {
 		font-family: var(--font-sans);
-		font-size: 11px;
+		font-size: var(--text-xs);
 		color: var(--text-primary);
 		white-space: nowrap;
 		overflow: hidden;
@@ -541,7 +546,7 @@
 
 	.entry-command {
 		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: var(--text-2xs);
 		color: var(--accent-dim);
 		white-space: nowrap;
 		overflow: hidden;
@@ -551,7 +556,7 @@
 
 	.entry-detail {
 		font-family: var(--font-sans);
-		font-size: 10px;
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
 		white-space: nowrap;
 		overflow: hidden;
@@ -567,10 +572,8 @@
 	}
 
 	.entry-category {
-		font-size: 8px;
-		font-weight: 600;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
+		font-family: var(--font-mono);
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
 		background: var(--bg-overlay);
 		padding: 1px 5px;
@@ -580,23 +583,16 @@
 
 	.entry-duration {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
 
 	.entry-time {
-		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-2xs);
 		color: var(--text-muted);
-		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
-		opacity: 0.6;
-	}
-
-	.log-entry:hover .entry-time {
-		opacity: 1;
 	}
 
 	/* ── Empty state ── */
@@ -608,7 +604,7 @@
 		gap: var(--space-sm);
 		padding: var(--space-xl);
 		color: var(--text-muted);
-		font-size: 11px;
+		font-size: var(--text-xs);
 		font-family: var(--font-sans);
 	}
 
@@ -632,14 +628,17 @@
 		border: 1px solid var(--border-default);
 		background: var(--bg-overlay);
 		color: var(--text-secondary);
-		font-size: 10px;
+		font-size: var(--text-2xs);
 		font-family: var(--font-sans);
 		font-weight: 500;
 		border-radius: var(--radius-round);
 		cursor: pointer;
 		z-index: 1;
 		box-shadow: var(--shadow-md);
-		transition: all var(--duration-fast) var(--ease-out);
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			border-color var(--duration-fast) var(--ease-out);
 		animation: fadeIn var(--duration-fast) var(--ease-out);
 	}
 

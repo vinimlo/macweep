@@ -3,79 +3,132 @@
 	import { formatSize } from '$lib/utils/format';
 	import { goto } from '$app/navigation';
 
-	const successCount = $derived(cleanupStore.results.filter((r) => r.success).length);
-	const errorCount = $derived(cleanupStore.results.filter((r) => !r.success).length);
+	const MB = 1024 * 1024;
+
+	const run = $derived(cleanupStore.lastRun);
+	const labels = $derived(new Map(run?.items.map((i) => [i.id, i.label]) ?? []));
+	const succeeded = $derived(run?.report.results.filter((r) => r.success) ?? []);
+	const failed = $derived(run?.report.results.filter((r) => !r.success) ?? []);
+	const freed = $derived(run?.report.freed_bytes ?? 0);
+	const diskFreed = $derived(run?.report.disk_freed_bytes ?? 0);
+	const touchedDocker = $derived(
+		run?.items.some((i) => i.category.startsWith('docker')) ?? false
+	);
+	// Explain the gap only when it is large enough to be noticed.
+	const diskLags = $derived(freed - diskFreed > Math.max(100 * MB, freed * 0.1));
+
+	const title = $derived(
+		run?.error
+			? 'Cleanup Failed'
+			: failed.length > 0
+				? 'Cleanup Finished with Errors'
+				: 'Cleanup Complete'
+	);
+
+	function done() {
+		cleanupStore.reset();
+		goto('/');
+	}
 </script>
 
-<div class="report">
-	<div class="check-circle">
-		<svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-			<path d="M7 14l5 5 9-10" stroke="var(--risk-zero)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-		</svg>
-	</div>
-
-	<h2>Sweep Complete</h2>
-
-	<div class="stats">
-		<div class="stat">
-			<span class="stat-value">{formatSize(cleanupStore.totalFreed)}</span>
-			<span class="stat-label">freed</span>
+{#if run}
+	<div class="report">
+		<div class="status-icon" class:warn={failed.length > 0 || run.error}>
+			{#if failed.length > 0 || run.error}
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M12 7v6M12 16.5v0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+				</svg>
+			{:else}
+				<svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+					<path d="M7 14l5 5 9-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+			{/if}
 		</div>
-		<span class="stat-sep"></span>
-		<div class="stat">
-			<span class="stat-value">{successCount}</span>
-			<span class="stat-label">cleaned</span>
-		</div>
-		{#if errorCount > 0}
-			<span class="stat-sep"></span>
-			<div class="stat error">
-				<span class="stat-value">{errorCount}</span>
-				<span class="stat-label">failed</span>
+
+		<h2>{title}</h2>
+
+		{#if run.error}
+			<p class="run-error selectable">{run.error}</p>
+		{:else}
+			<div class="stats">
+				<div class="stat">
+					<span class="stat-value">{formatSize(freed)}</span>
+					<span class="stat-label">removed</span>
+				</div>
+				<span class="stat-sep"></span>
+				<div class="stat">
+					<span class="stat-value">{succeeded.length}</span>
+					<span class="stat-label">cleaned</span>
+				</div>
+				{#if failed.length > 0}
+					<span class="stat-sep"></span>
+					<div class="stat error">
+						<span class="stat-value">{failed.length}</span>
+						<span class="stat-label">failed</span>
+					</div>
+				{/if}
+			</div>
+
+			<p class="disk">
+				Free space on disk <strong>+{formatSize(diskFreed)}</strong>
+			</p>
+			{#if diskLags}
+				<p class="note">
+					{#if touchedDocker}
+						Docker keeps freed space inside its disk image until Docker Desktop restarts.
+					{:else}
+						macOS can hold deleted files in local snapshots for a while before the space shows up as free.
+					{/if}
+				</p>
+			{/if}
+		{/if}
+
+		{#if failed.length > 0}
+			<div class="errors">
+				<span class="errors-title">Not cleaned</span>
+				{#each failed as result (result.id)}
+					<div class="error-row">
+						<span class="error-label">{labels.get(result.id) ?? 'Unknown item'}</span>
+						<span class="error-msg selectable">{result.error}</span>
+					</div>
+				{/each}
 			</div>
 		{/if}
+
+		<button class="btn btn-lg btn-primary" onclick={done}>Back to Dashboard</button>
 	</div>
-
-	{#if errorCount > 0}
-		<div class="errors">
-			<span class="errors-title">Errors</span>
-			{#each cleanupStore.results.filter((r) => !r.success) as result (result.id)}
-				<div class="error-row">
-					<span class="error-id">{result.id.slice(0, 8)}</span>
-					<span class="error-msg">{result.error}</span>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
-	<button class="btn-done" onclick={() => { cleanupStore.reset(); goto('/'); }}>
-		Back to Dashboard
-	</button>
-</div>
+{/if}
 
 <style>
 	.report {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-lg);
-		padding: var(--space-2xl);
+		gap: var(--space-base);
+		padding: var(--space-xl) var(--space-lg);
 		text-align: center;
 		animation: scaleIn var(--duration-slow) var(--ease-out);
 	}
 
-	.check-circle {
-		width: 56px;
-		height: 56px;
+	.status-icon {
+		width: 52px;
+		height: 52px;
 		border-radius: 50%;
-		background: var(--risk-zero-dim);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		animation: check-pop 0.5s var(--ease-spring) 0.15s both;
+		color: var(--risk-zero);
+		background: var(--risk-zero-dim);
+		animation: check-pop 0.5s var(--ease-spring) 0.1s both;
+	}
+
+	.status-icon.warn {
+		color: var(--risk-medium);
+		background: var(--risk-medium-dim);
 	}
 
 	h2 {
-		font-size: 18px;
+		font-size: var(--text-xl);
 		font-weight: 600;
 		letter-spacing: -0.01em;
 	}
@@ -83,7 +136,7 @@
 	.stats {
 		display: flex;
 		align-items: center;
-		gap: var(--space-lg);
+		gap: var(--space-base);
 	}
 
 	.stat {
@@ -93,78 +146,81 @@
 	}
 
 	.stat-value {
-		font-family: var(--font-mono);
-		font-size: 22px;
-		font-weight: 200;
+		font-size: var(--text-2xl);
+		font-weight: 300;
 		letter-spacing: -0.02em;
 		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.stat-label {
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
+		font-size: var(--text-sm);
 		color: var(--text-muted);
 	}
 
-	.stat.error .stat-value { color: var(--risk-high); }
+	.stat.error .stat-value {
+		color: var(--risk-high);
+	}
 
 	.stat-sep {
-		width: 3px;
-		height: 3px;
-		border-radius: 50%;
-		background: var(--bg-active);
+		width: 1px;
+		height: 14px;
+		background: var(--border-default);
+	}
+
+	.disk {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+	}
+
+	.disk strong {
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.note {
+		max-width: 400px;
+		font-size: var(--text-sm);
+		color: var(--text-muted);
+		margin-top: calc(var(--space-sm) * -1);
+	}
+
+	.run-error {
+		max-width: 440px;
+		font-size: var(--text-sm);
+		color: var(--risk-high);
 	}
 
 	.errors {
 		width: 100%;
 		text-align: left;
-		padding: var(--space-md);
+		padding: var(--space-md) var(--space-base);
 		background: var(--risk-high-dim);
-		border: 1px solid color-mix(in srgb, var(--risk-high) 20%, transparent);
+		border: 1px solid color-mix(in srgb, var(--risk-high) 22%, transparent);
 		border-radius: var(--radius-md);
-	}
-
-	.errors-title {
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--risk-high);
-		display: block;
-		margin-bottom: var(--space-sm);
-	}
-
-	.error-row {
-		font-size: 11px;
-		color: var(--text-secondary);
-		padding: 3px 0;
 		display: flex;
+		flex-direction: column;
 		gap: var(--space-sm);
 	}
 
-	.error-id {
-		font-family: var(--font-mono);
-		color: var(--text-muted);
-		font-size: 10px;
-	}
-
-	.error-msg { color: var(--risk-high); }
-
-	.btn-done {
-		padding: 10px 28px;
-		background: var(--accent);
-		color: var(--text-inverse);
-		border-radius: var(--radius-md);
+	.errors-title {
+		font-size: var(--text-sm);
 		font-weight: 600;
-		font-size: 12px;
-		transition: all var(--duration-fast);
+		color: var(--risk-high);
 	}
 
-	.btn-done:hover {
-		background: var(--accent-hover);
-		box-shadow: 0 0 16px var(--accent-glow);
+	.error-row {
+		display: flex;
+		flex-direction: column;
+		font-size: var(--text-sm);
+	}
+
+	.error-label {
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.error-msg {
+		color: var(--text-secondary);
+		word-break: break-word;
 	}
 </style>

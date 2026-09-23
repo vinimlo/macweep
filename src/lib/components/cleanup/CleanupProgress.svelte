@@ -18,13 +18,13 @@
 				stroke-dashoffset={2 * Math.PI * 12 * (1 - progress / 100)}
 				stroke-linecap="round"
 				transform="rotate(-90 16 16)"
-				style="transition: stroke-dashoffset 0.3s var(--ease-out)"
+				class="progress-arc"
 			/>
 		</svg>
 	</div>
 
 	<div class="info">
-		<span class="title">Sweeping</span>
+		<span class="title">Cleaning</span>
 		<span class="counter">{cleanupStore.completedItems} of {cleanupStore.totalItems}</span>
 	</div>
 
@@ -47,6 +47,10 @@
 		animation: spin 3s linear infinite;
 	}
 
+	.progress-arc {
+		transition: stroke-dashoffset 0.3s var(--ease-out);
+	}
+
 	.info {
 		display: flex;
 		flex-direction: column;
@@ -56,14 +60,12 @@
 
 	.title {
 		font-weight: 600;
-		font-size: 15px;
+		font-size: var(--text-lg);
 	}
 
 	.counter {
-		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: var(--text-sm);
 		color: var(--text-muted);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.bar-wrap {

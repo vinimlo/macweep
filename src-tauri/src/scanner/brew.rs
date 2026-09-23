@@ -22,7 +22,8 @@ impl Scanner for BrewScanner {
     }
 
     async fn scan(&self) -> Result<Vec<ScanResult>> {
-        let cache_output = Command::new("brew").arg("--cache").output().await?;
+        let cache_output =
+            scanner::run_with_timeout(Command::new("brew").arg("--cache"), 30).await?;
         let cache_path = String::from_utf8_lossy(&cache_output.stdout)
             .trim()
             .to_string();
@@ -60,16 +61,13 @@ impl Scanner for BrewScanner {
         }])
     }
 
-    async fn clean(&self, items: &[ScanResult]) -> Result<Vec<CleanResult>> {
+    async fn clean(&self, items: &[ScanResult]) -> Vec<CleanResult> {
         let mut results = Vec::new();
         for item in items {
-            let output = Command::new("brew")
-                .args(["cleanup", "--prune=all"])
-                .output()
-                .await?;
-
-            results.push(scanner::command_to_clean_result(item, &output));
+            let mut cmd = Command::new("brew");
+            cmd.args(["cleanup", "--prune=all"]);
+            results.push(scanner::clean_with_command(item, &mut cmd, 300).await);
         }
-        Ok(results)
+        results
     }
 }

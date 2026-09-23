@@ -2,7 +2,6 @@
 	import { scanStore } from '$lib/stores/scan.svelte';
 	import ProgressBar from '$lib/components/shared/ProgressBar.svelte';
 	import CategoryScanRow from './CategoryScanRow.svelte';
-	import ScanSummary from './ScanSummary.svelte';
 
 	const progress = $derived(
 		scanStore.totalScanners > 0
@@ -21,21 +20,23 @@
 			</div>
 			<div class="header-text">
 				<span class="title">Scanning system</span>
-				<span class="counter">{scanStore.completedScanners}/{scanStore.totalScanners} scanners</span>
+				<span class="counter">
+				{#if scanStore.totalScanners > 0}
+					{scanStore.completedScanners} of {scanStore.totalScanners} scanners
+				{:else}
+					Checking installed tools…
+				{/if}
+			</span>
 			</div>
 		</div>
 		<ProgressBar value={progress} color="var(--accent)" />
 	{/if}
 
 	<div class="scanners">
-		{#each Object.entries(scanStore.scannerStatuses) as [category, status], i (category)}
-			<CategoryScanRow {category} {status} index={i} />
+		{#each Object.entries(scanStore.scannerStatuses) as [category, status] (category)}
+			<CategoryScanRow {category} {status} />
 		{/each}
 	</div>
-
-	{#if scanStore.status === 'completed'}
-		<ScanSummary />
-	{/if}
 </div>
 
 <style>
@@ -88,14 +89,12 @@
 
 	.title {
 		font-weight: 600;
-		font-size: 13px;
+		font-size: var(--text-base);
 	}
 
 	.counter {
-		font-size: 10px;
+		font-size: var(--text-xs);
 		color: var(--text-muted);
-		font-family: var(--font-mono);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.scanners {

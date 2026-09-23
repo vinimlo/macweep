@@ -48,10 +48,6 @@ pub enum ScanProgress {
         category: String,
         error: String,
     },
-    Cancelled {
-        completed_scanners: usize,
-        total_scanners: usize,
-    },
     Completed,
 }
 
@@ -66,10 +62,6 @@ pub enum CleanProgress {
         success: bool,
         freed_bytes: u64,
     },
-    Failed {
-        id: String,
-        error: String,
-    },
     Completed {
         total_freed: u64,
     },
@@ -80,8 +72,17 @@ pub struct ScanReport {
     pub items: Vec<ScanResult>,
     pub total_bytes: u64,
     pub scan_duration_ms: u64,
-    pub available_tools: Vec<String>,
-    pub disk_free_percent: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CleanReport {
+    pub results: Vec<CleanResult>,
+    /// Sum of per-item freed bytes. Filesystem items are measured before and after removal;
+    /// tool-driven items (Docker, Ollama) report the scanner's estimate.
+    pub freed_bytes: u64,
+    /// Growth of free space on the startup disk during the cleanup. Can be lower than
+    /// `freed_bytes`: Docker's disk image and APFS snapshots release space later.
+    pub disk_freed_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

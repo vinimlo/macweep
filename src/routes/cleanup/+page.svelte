@@ -3,14 +3,14 @@
 	import { cleanupStore } from '$lib/stores/cleanup.svelte';
 	import { goto } from '$app/navigation';
 
-	if (cleanupStore.selectedItems.length === 0) {
+	if (cleanupStore.selectedItems.length === 0 || cleanupStore.status === 'cleaning') {
 		goto('/');
 	}
 </script>
 
 <div class="cleanup-page">
 	<div class="page-header">
-		<button class="back" onclick={() => goto('/')}>
+		<button class="back" onclick={() => goto('/')} aria-label="Back to dashboard">
 			<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
 				<path d="M8 2L3 6l5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 			</svg>
@@ -41,16 +41,20 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
+		padding: 2px 4px;
+		border-radius: var(--radius-sm);
 		color: var(--text-secondary);
-		font-size: 11px;
+		font-size: var(--text-sm);
 		font-weight: 500;
-		transition: color var(--duration-fast);
+		transition: color var(--duration-fast) var(--ease-out);
 	}
 
-	.back:hover { color: var(--accent); }
+	.back:hover {
+		color: var(--accent);
+	}
 
 	h2 {
-		font-size: 16px;
+		font-size: var(--text-xl);
 		font-weight: 600;
 		letter-spacing: -0.01em;
 	}
