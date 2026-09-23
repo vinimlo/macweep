@@ -462,4 +462,115 @@ mod tests {
         assert!(is_valid_docker_id("sha256:abc-1"));
         assert!(is_valid_volume_name("shop_pgdata"));
     }
+
+    // --- Opt-in integration tests against a real Docker daemon ---
+    //
+    //   cd src-tauri && cargo test -- --ignored docker
+    //
+    // They only create and remove their own `macweep-verify-*` image, volume and
+    // container; nothing is started and no pull is needed.
+
+    async fn docker(args: &[&str]) -> std::process::Output {
+        Command::new("docker").args(args).output().await.unwrap()
+    }
+
+    /// Build a tiny single-file image from scratch and return its tag.
+    async fn build_scratch_image(name: &str) -> String {
+        let dir = std::env::temp_dir().join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("marker"), name).unwrap();
+        std::fs::write(
+            dir.join("Dockerfile"),
+            "FROM scratch\nCOPY marker /marker\nCMD [\"/marker\"]\n",
+        )
+        .unwrap();
+        let tag = format!("{name}:a");
+        let out = docker(&["build", "-q", "-t", &tag, &dir.to_string_lossy()]).await;
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        tag
+    }
+
+    fn verify_name() -> String {
+        format!(
+            "macweep-verify-{}",
+            &uuid::Uuid::new_v4().simple().to_string()[..8]
+        )
+    }
+
+    #[tokio::test]
+    #[ignore = "needs a running Docker daemon"]
+    async fn docker_named_volume_used_by_stopped_container_is_removed() {
+        let name = verify_name();
+        let image = build_scratch_image(&name).await;
+        assert!(docker(&["volume", "create", &name]).await.status.success());
+        let mount = format!("{name}:/data");
+        let created = docker(&["create", "--name", &name, "-v", &mount, &image]).await;
+        assert!(
+            created.status.success(),
+            "{}",
+            String::from_utf8_lossy(&created.stderr)
+        );
+
+        let scanner = DockerNamedVolumesScanner;
+        let item = scanner
+            .scan()
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|i| i.path == name)
+            .expect("volume attached to a stopped container is offered");
+        let warning = item.warning.clone().unwrap_or_default();
+        assert!(
+            warning.contains(&name),
+            "warning names the container: {warning}"
+        );
+
+        let results = scanner.clean(std::slice::from_ref(&item)).await;
+        let volume_gone = !docker(&["volume", "inspect", &name]).await.status.success();
+        let container_gone = !docker(&["container", "inspect", &name])
+            .await
+            .status
+            .success();
+        docker(&["rm", "-f", &name]).await;
+        docker(&["volume", "rm", "-f", &name]).await;
+        docker(&["rmi", "-f", &image]).await;
+
+        assert!(results[0].success, "{:?}", results[0].error);
+        assert!(volume_gone && container_gone);
+    }
+
+    #[tokio::test]
+    #[ignore = "needs a running Docker daemon"]
+    async fn docker_image_with_two_tags_is_offered_and_removed_once() {
+        let name = verify_name();
+        let first = build_scratch_image(&name).await;
+        let second = format!("{name}:b");
+        assert!(docker(&["tag", &first, &second]).await.status.success());
+
+        let scanner = DockerImagesScanner;
+        let items: Vec<ScanResult> = scanner
+            .scan()
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|i| i.label.contains(&name))
+            .collect();
+        let results = scanner.clean(&items).await;
+        let image_gone = !docker(&["image", "inspect", &first]).await.status.success()
+            && !docker(&["image", "inspect", &second])
+                .await
+                .status
+                .success();
+        docker(&["rmi", "-f", &first, &second]).await;
+
+        assert_eq!(items.len(), 1, "both tags grouped into one item");
+        assert!(items[0].label.contains(":a") && items[0].label.contains(":b"));
+        assert!(results[0].success, "{:?}", results[0].error);
+        assert!(image_gone);
+    }
 }
