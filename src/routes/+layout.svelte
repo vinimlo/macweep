@@ -2,19 +2,40 @@
 	import '../app.css';
 	import { appStore } from '$lib/stores/app.svelte';
 	import { scanStore } from '$lib/stores/scan.svelte';
+	import { cleanupStore } from '$lib/stores/cleanup.svelte';
 	import { activityStore } from '$lib/stores/activity.svelte';
+	import { toastStore } from '$lib/stores/toasts.svelte';
 	import { getDiskInfo, getActivityLog } from '$lib/tauri/commands';
-	import { formatSize, formatPercent, diskColor } from '$lib/utils/format';
+	import type { ActivityEntry } from '$lib/tauri/types';
+	import { formatPercent, diskColor } from '$lib/utils/format';
 	import ToastContainer from '$lib/components/shared/ToastContainer.svelte';
 	import ActivityDrawer from '$lib/components/shared/ActivityDrawer.svelte';
 	import FloatingCleanBar from '$lib/components/shared/FloatingCleanBar.svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
 	let { children } = $props();
 
-	let unlistenActivity: (() => void) | undefined;
 	let historyLoaded = false;
+
+	/** Menu bar actions. Auto-clean still goes through the Safe confirmation step. */
+	function handleTrayAction(action: string) {
+		if (action === 'full_scan') {
+			goto('/');
+			scanStore.start();
+		} else if (action === 'auto_clean' && cleanupStore.status !== 'cleaning') {
+			const safeItems = scanStore.byRisk.Zero;
+			if (scanStore.status === 'completed' && safeItems.length > 0) {
+				cleanupStore.select(safeItems);
+				goto('/cleanup');
+			} else if (scanStore.status !== 'scanning') {
+				goto('/');
+				scanStore.start();
+				toastStore.info('Scanning first — safe items will be ready to review when it finishes');
+			}
+		}
+	}
 
 	onMount(() => {
 		getDiskInfo()
@@ -28,18 +49,26 @@
 			})
 			.catch(() => { historyLoaded = true; });
 
+		const unlisteners: (() => void)[] = [];
+		let destroyed = false;
 		import('@tauri-apps/api/event')
 			.then(({ listen }) =>
-				listen('activity-log', (event: any) => {
-					if (!historyLoaded) return;
-					activityStore.addEntry(event.payload);
-				})
+				Promise.all([
+					listen<ActivityEntry>('activity-log', (event) => {
+						if (historyLoaded) activityStore.addEntry(event.payload);
+					}),
+					listen<string>('tray-action', (event) => handleTrayAction(event.payload))
+				])
 			)
-			.then((fn) => { unlistenActivity = fn; })
+			.then((fns) => {
+				if (destroyed) fns.forEach((fn) => fn());
+				else unlisteners.push(...fns);
+			})
 			.catch(() => {});
 
 		return () => {
-			unlistenActivity?.();
+			destroyed = true;
+			unlisteners.forEach((fn) => fn());
 		};
 	});
 
@@ -88,9 +117,9 @@
 			{/each}
 		</nav>
 
-		<div class="chrome-right">
+		<div class="chrome-right" data-tauri-drag-region>
 			{#if appStore.diskInfo}
-				<div class="disk-pill">
+				<div class="disk-pill" title="Startup disk {formatPercent(diskPercent)} used">
 					<svg class="disk-ring" width="18" height="18" viewBox="0 0 18 18">
 						<circle cx="9" cy="9" r="7" fill="none" stroke="var(--bg-active)" stroke-width="2" />
 						<circle
@@ -102,7 +131,7 @@
 							stroke-dashoffset={2 * Math.PI * 7 * (1 - diskPercent / 100)}
 							stroke-linecap="round"
 							transform="rotate(-90 9 9)"
-							style="transition: stroke-dashoffset 0.6s var(--ease-out)"
+							class="disk-ring-arc"
 						/>
 					</svg>
 					<span class="disk-text">{formatPercent(diskPercent)}</span>
@@ -110,11 +139,11 @@
 			{/if}
 
 			{#if scanStore.status === 'scanning'}
-				<div class="status-beacon scanning">
+				<div class="status-beacon scanning" title="Scanning">
 					<span class="beacon-dot"></span>
 				</div>
 			{:else if scanStore.status === 'completed'}
-				<div class="status-beacon completed">
+				<div class="status-beacon completed" title="Scan complete">
 					<span class="beacon-dot"></span>
 				</div>
 			{/if}
@@ -138,77 +167,75 @@
 		background: var(--bg-base);
 	}
 
+	/* The window uses an overlay title bar: the traffic lights sit inside this
+	   header, so the left edge leaves room for them. */
 	.chrome {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 var(--space-base);
+		padding: 0 var(--space-base) 0 84px;
 		height: 44px;
 		background: var(--bg-raised);
 		border-bottom: 1px solid var(--border-subtle);
-		-webkit-app-region: drag;
 		flex-shrink: 0;
 	}
 
 	.chrome-left {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		min-width: 140px;
+		gap: 7px;
+		min-width: 120px;
 	}
 
 	.logo-mark {
 		flex-shrink: 0;
-		-webkit-app-region: no-drag;
 	}
 
 	.wordmark {
-		font-weight: 700;
-		font-size: 14px;
-		letter-spacing: -0.03em;
-		color: var(--accent);
-		-webkit-app-region: no-drag;
+		font-weight: 650;
+		font-size: var(--text-base);
+		letter-spacing: -0.01em;
+		color: var(--text-primary);
 	}
 
 	.chrome-nav {
 		display: flex;
 		align-items: center;
 		gap: 2px;
-		-webkit-app-region: no-drag;
 		background: var(--bg-base);
+		border: 1px solid var(--border-subtle);
 		border-radius: var(--radius-md);
-		padding: 3px;
+		padding: 2px;
 	}
 
 	.nav-item {
-		padding: 4px 14px;
+		padding: 3px 14px;
 		border-radius: 6px;
-		font-size: 11px;
+		font-size: var(--text-sm);
 		font-weight: 500;
-		letter-spacing: 0.01em;
 		color: var(--text-secondary);
-		transition: all var(--duration-fast) var(--ease-out);
-		-webkit-app-region: no-drag;
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out);
 	}
 
 	.nav-item:hover {
 		color: var(--text-primary);
-		background: var(--bg-surface);
 	}
 
 	.nav-item.active {
 		color: var(--text-primary);
-		background: var(--bg-surface);
-		box-shadow: var(--shadow-sm);
+		background: var(--bg-overlay);
+		box-shadow: var(--highlight), var(--shadow-sm);
 	}
 
 	.chrome-right {
 		display: flex;
 		align-items: center;
 		gap: var(--space-md);
-		min-width: 140px;
+		min-width: 120px;
+		height: 100%;
 		justify-content: flex-end;
-		-webkit-app-region: no-drag;
 	}
 
 	.disk-pill {
@@ -221,24 +248,26 @@
 		flex-shrink: 0;
 	}
 
+	.disk-ring-arc {
+		transition: stroke-dashoffset 0.6s var(--ease-out);
+	}
+
 	.disk-text {
-		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: var(--text-xs);
 		font-weight: 600;
 		color: var(--text-secondary);
-		font-variant-numeric: tabular-nums;
 	}
 
 	.status-beacon {
 		position: relative;
-		width: 8px;
-		height: 8px;
+		width: 7px;
+		height: 7px;
 	}
 
 	.beacon-dot {
 		display: block;
-		width: 8px;
-		height: 8px;
+		width: 7px;
+		height: 7px;
 		border-radius: 50%;
 	}
 
@@ -257,6 +286,5 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		padding: var(--space-lg) var(--space-xl);
-		-webkit-app-region: no-drag;
 	}
 </style>

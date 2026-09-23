@@ -29,21 +29,25 @@ export type ScanProgress =
       bytes: number;
     }
   | { type: "ScannerFailed"; category: string; error: string }
-  | { type: "Cancelled"; completed_scanners: number; total_scanners: number }
   | { type: "Completed" };
 
 export type CleanProgress =
   | { type: "Started"; total_items: number }
   | { type: "ItemCompleted"; id: string; success: boolean; freed_bytes: number }
-  | { type: "Failed"; id: string; error: string }
   | { type: "Completed"; total_freed: number };
 
 export interface ScanReport {
   items: ScanResult[];
   total_bytes: number;
   scan_duration_ms: number;
-  available_tools: string[];
-  disk_free_percent: number;
+}
+
+export interface CleanReport {
+  results: CleanResult[];
+  /** Sum of per-item freed bytes (filesystem items are measured). */
+  freed_bytes: number;
+  /** Growth of free space on the startup disk during the cleanup. */
+  disk_freed_bytes: number;
 }
 
 export interface DiskInfo {
@@ -51,13 +55,6 @@ export interface DiskInfo {
   used_bytes: number;
   free_bytes: number;
   free_percent: number;
-}
-
-export interface PreflightResult {
-  docker_running: boolean;
-  docker_containers_active: boolean;
-  disk_free_percent: number;
-  available_tools: string[];
 }
 
 export type ActivityLevel =

@@ -1,7 +1,12 @@
-import type { ScanResult, ScanProgress, ScanReport } from "$lib/tauri/types";
+import type { ScanResult, ScanProgress } from "$lib/tauri/types";
+import { scanAll, cancelScan, getDiskInfo } from "$lib/tauri/commands";
 import { riskOrder } from "$lib/utils/risk";
+import { sanitizeError } from "$lib/utils/errors";
+import { appStore } from "./app.svelte";
+import { toastStore } from "./toasts.svelte";
 
-export type ScanStatus = "idle" | "scanning" | "completed" | "error";
+export type ScanStatus = "idle" | "scanning" | "completed";
+export type ScannerStatus = "pending" | "scanning" | "completed" | "failed";
 
 interface CategoryGroup {
   category: string;
@@ -12,18 +17,18 @@ interface CategoryGroup {
 class ScanStore {
   status = $state<ScanStatus>("idle");
   items = $state<ScanResult[]>([]);
-  totalBytes = $state(0);
   scanDurationMs = $state(0);
-  availableTools = $state<string[]>([]);
-  diskFreePercent = $state(0);
 
   // Progress tracking
   totalScanners = $state(0);
-  currentScanner = $state<string | null>(null);
   completedScanners = $state(0);
-  scannerStatuses = $state<
-    Record<string, "pending" | "scanning" | "completed" | "failed">
-  >({});
+  scannerStatuses = $state<Record<string, ScannerStatus>>({});
+
+  /** Bumped by every start/stop. Progress and results from an older run are ignored,
+   * so two scans can never feed the same counter. */
+  private run = 0;
+
+  totalBytes = $derived(this.items.reduce((sum, i) => sum + i.size_bytes, 0));
 
   categories = $derived.by(() => {
     const groups = new Map<string, CategoryGroup>();
@@ -61,61 +66,78 @@ class ScanStore {
     return groups;
   });
 
-  handleProgress(progress: ScanProgress) {
+  async start() {
+    if (this.status === "scanning") return;
+    const run = ++this.run;
+    this.reset();
+    // Flip to "scanning" right away: the backend only reports Started after its
+    // availability checks, and the Scan button must not stay clickable meanwhile.
+    this.status = "scanning";
+    try {
+      const report = await scanAll((progress) => {
+        if (run === this.run) this.handleProgress(progress);
+      });
+      if (run !== this.run) return;
+      this.items = report.items;
+      this.scanDurationMs = report.scan_duration_ms;
+      this.status = "completed";
+      getDiskInfo()
+        .then((info) => (appStore.diskInfo = info))
+        .catch(() => {});
+    } catch (e) {
+      if (run !== this.run) return;
+      this.status = "idle";
+      toastStore.error(`Scan failed: ${sanitizeError(e)}`);
+    }
+  }
+
+  async stop() {
+    if (this.status !== "scanning") return;
+    this.run++;
+    this.reset();
+    try {
+      await cancelScan();
+    } catch {
+      // best-effort
+    }
+    toastStore.info("Scan stopped");
+  }
+
+  /** Drop cleaned items so they are never offered (or counted) again. */
+  removeItems(ids: Iterable<string>) {
+    const gone = new Set(ids);
+    this.items = this.items.filter((i) => !gone.has(i.id));
+  }
+
+  private handleProgress(progress: ScanProgress) {
     switch (progress.type) {
       case "Started":
         this.totalScanners = progress.total_scanners;
         this.completedScanners = 0;
-        this.status = "scanning";
         break;
       case "ScannerStarted":
-        this.currentScanner = progress.category;
         this.scannerStatuses = {
           ...this.scannerStatuses,
           [progress.category]: "scanning",
         };
         break;
       case "ScannerCompleted":
-        this.completedScanners++;
-        this.scannerStatuses = {
-          ...this.scannerStatuses,
-          [progress.category]: "completed",
-        };
-        break;
       case "ScannerFailed":
         this.completedScanners++;
         this.scannerStatuses = {
           ...this.scannerStatuses,
-          [progress.category]: "failed",
+          [progress.category]:
+            progress.type === "ScannerCompleted" ? "completed" : "failed",
         };
-        break;
-      case "Cancelled":
-        this.currentScanner = null;
-        this.status = "idle";
-        break;
-      case "Completed":
-        this.currentScanner = null;
-        this.status = "completed";
         break;
     }
   }
 
-  setReport(report: ScanReport) {
-    this.items = report.items;
-    this.totalBytes = report.total_bytes;
-    this.scanDurationMs = report.scan_duration_ms;
-    this.availableTools = report.available_tools;
-    this.diskFreePercent = report.disk_free_percent;
-    this.status = "completed";
-  }
-
-  reset() {
+  private reset() {
     this.status = "idle";
     this.items = [];
-    this.totalBytes = 0;
     this.scanDurationMs = 0;
     this.totalScanners = 0;
-    this.currentScanner = null;
     this.completedScanners = 0;
     this.scannerStatuses = {};
   }
