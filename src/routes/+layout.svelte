@@ -168,12 +168,13 @@
 	}
 
 	/* The window uses an overlay title bar: the traffic lights sit inside this
-	   header, so the left edge leaves room for them. */
+	   header (centered at y=22, ending at x=76 — see trafficLightPosition in
+	   tauri.conf.json), so the left edge leaves room for them. */
 	.chrome {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 var(--space-base) 0 84px;
+		padding: 0 var(--space-base) 0 92px;
 		height: 44px;
 		background: var(--bg-raised);
 		border-bottom: 1px solid var(--border-subtle);
